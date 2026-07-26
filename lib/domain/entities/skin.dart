@@ -10,6 +10,8 @@ class SkinDef {
     this.ghost = false,
     this.dualTrail = false,
     this.prism = false,
+    this.spriteAsset,
+    this.creatureName,
     this.unlockBestScore,
     this.unlockGamesPlayed,
     this.unlockDailyStreak,
@@ -22,6 +24,12 @@ class SkinDef {
   final bool ghost;
   final bool dualTrail;
   final bool prism;
+
+  /// Idle frame path under Flutter assets, e.g. `assets/images/creatures/players/default.png`.
+  final String? spriteAsset;
+
+  /// Myth creature name shown in credits / skins (from Shade's pack).
+  final String? creatureName;
 
   final int? unlockBestScore;
   final int? unlockGamesPlayed;

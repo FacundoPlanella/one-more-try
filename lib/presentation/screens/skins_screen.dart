@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/catalogs/skin_catalog.dart';
+import '../../domain/entities/skin.dart';
 import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
 
@@ -41,19 +42,7 @@ class SkinsScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: skin.ghost
-                          ? skin.color.withValues(alpha: 0.5)
-                          : skin.color,
-                      border: skin.secondary != null
-                          ? Border.all(color: skin.secondary!, width: 2)
-                          : null,
-                    ),
-                  ),
+                  _SkinPreview(skin: skin),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -66,8 +55,18 @@ class SkinsScreen extends StatelessWidget {
                             fontSize: 18,
                           ),
                         ),
+                        if (skin.creatureName != null)
+                          Text(
+                            skin.creatureName!,
+                            style: GoogleFonts.manrope(
+                              color: colors.text1,
+                              fontSize: 12,
+                            ),
+                          ),
                         Text(
-                          unlocked ? (equipped ? 'Equipped' : 'Unlocked') : skin.unlockHint,
+                          unlocked
+                              ? (equipped ? 'Equipped' : 'Unlocked')
+                              : skin.unlockHint,
                           style: GoogleFonts.manrope(
                             color: colors.text1,
                             fontSize: 13,
@@ -83,6 +82,41 @@ class SkinsScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _SkinPreview extends StatelessWidget {
+  const _SkinPreview({required this.skin});
+
+  final SkinDef skin;
+
+  @override
+  Widget build(BuildContext context) {
+    final asset = skin.spriteAsset;
+    if (asset != null) {
+      return Image.asset(
+        asset,
+        width: 42,
+        height: 42,
+        filterQuality: FilterQuality.none,
+        errorBuilder: (_, _, _) => _colorFallback(),
+      );
+    }
+    return _colorFallback();
+  }
+
+  Widget _colorFallback() {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: skin.ghost ? skin.color.withValues(alpha: 0.5) : skin.color,
+        border: skin.secondary != null
+            ? Border.all(color: skin.secondary!, width: 2)
+            : null,
       ),
     );
   }

@@ -40,3 +40,5 @@ flutter:
     - assets/audio/sfx/die.wav
     - assets/audio/sfx/best.wav
     - assets/branding/app_icon.png
+    - assets/images/creatures/players/
+    - assets/images/creatures/obstacles/

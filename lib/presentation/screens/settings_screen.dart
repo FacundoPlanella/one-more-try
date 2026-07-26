@@ -6,6 +6,7 @@ import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
+import 'credits_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -77,6 +78,21 @@ class SettingsScreen extends StatelessWidget {
               '${GameConstants.appName}\nOffline · Banner ads only · v1.0.0',
               style: TextStyle(color: colors.text1),
             ),
+          ),
+          ListTile(
+            title: const Text('Credits'),
+            subtitle: Text(
+              'Art by Shade · Philippine Myth Creatures',
+              style: TextStyle(color: colors.text1, fontSize: 12),
+            ),
+            trailing: Icon(Icons.chevron_right_rounded, color: colors.text1),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const CreditsScreen(fromSettings: true),
+                ),
+              );
+            },
           ),
           ListTile(
             title: const Text('Privacy policy'),

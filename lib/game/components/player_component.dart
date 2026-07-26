@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/flame.dart';
 
 import '../../core/constants/game_constants.dart';
 import '../../domain/entities/skin.dart';
@@ -12,9 +13,12 @@ class PlayerComponent extends PositionComponent {
   int lane = 1;
   double _displayLane = 1;
   final List<Offset> _trail = [];
+  Sprite? _sprite;
 
   double laneWidth = 0;
   double originX = 0;
+
+  static const double _spriteSize = 40;
 
   void cycleLane() {
     lane = (lane + 1) % GameConstants.laneCount;
@@ -29,6 +33,33 @@ class PlayerComponent extends PositionComponent {
 
   void _snapX() {
     position.x = originX + (_displayLane + 0.5) * laneWidth;
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await _loadSprite();
+  }
+
+  Future<void> _loadSprite() async {
+    final path = skin.spriteAsset;
+    if (path == null) {
+      _sprite = null;
+      return;
+    }
+    try {
+      final relative = path
+          .replaceFirst('assets/images/', '')
+          .replaceFirst('assets/', '');
+      final image = await Flame.images.load(relative);
+      _sprite = Sprite(image);
+    } catch (_) {
+      _sprite = null;
+    }
+  }
+
+  Future<void> applySkin(SkinDef next) async {
+    skin = next;
+    await _loadSprite();
   }
 
   @override
@@ -72,6 +103,32 @@ class PlayerComponent extends PositionComponent {
           paint2,
         );
       }
+    }
+
+    final sprite = _sprite;
+    if (sprite != null) {
+      canvas.save();
+      if (skin.ghost) {
+        canvas.saveLayer(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: _spriteSize,
+            height: _spriteSize,
+          ),
+          Paint()..color = const Color(0x8CFFFFFF),
+        );
+      }
+      sprite.render(
+        canvas,
+        size: Vector2.all(_spriteSize),
+        anchor: Anchor.center,
+        overridePaint: Paint()..filterQuality = FilterQuality.none,
+      );
+      if (skin.ghost) {
+        canvas.restore();
+      }
+      canvas.restore();
+      return;
     }
 
     final fill = Paint()

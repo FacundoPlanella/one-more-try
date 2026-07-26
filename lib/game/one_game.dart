@@ -1,6 +1,8 @@
 import 'dart:math';
 
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
+import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -61,6 +63,23 @@ class OneGame extends FlameGame with TapCallbacks {
 
   final List<ObstacleRowComponent> _obstacles = [];
   final List<OrbComponent> _orbs = [];
+  final List<Sprite> _obstacleSprites = [];
+  final Random _spriteRng = Random();
+
+  static const List<String> _obstacleAssetNames = [
+    'creatures/obstacles/obstacle_0.png',
+    'creatures/obstacles/obstacle_1.png',
+    'creatures/obstacles/obstacle_2.png',
+    'creatures/obstacles/obstacle_3.png',
+    'creatures/obstacles/obstacle_4.png',
+    'creatures/obstacles/obstacle_5.png',
+    'creatures/obstacles/obstacle_6.png',
+    'creatures/obstacles/obstacle_7.png',
+    'creatures/obstacles/obstacle_8.png',
+    'creatures/obstacles/obstacle_9.png',
+    'creatures/obstacles/obstacle_10.png',
+    'creatures/obstacles/obstacle_11.png',
+  ];
 
   double get _laneWidth => size.x / GameConstants.laneCount;
   double get _originX => 0;
@@ -71,6 +90,15 @@ class OneGame extends FlameGame with TapCallbacks {
 
   @override
   Future<void> onLoad() async {
+    for (final name in _obstacleAssetNames) {
+      try {
+        final image = await Flame.images.load(name);
+        _obstacleSprites.add(Sprite(image));
+      } catch (_) {
+        // Keep geometric fallback if a sprite fails to load.
+      }
+    }
+
     generator = SegmentGenerator(runSeed: runSeed);
     player = PlayerComponent(skin: skin);
     await add(player);
@@ -82,6 +110,17 @@ class OneGame extends FlameGame with TapCallbacks {
     for (var i = 0; i < 5; i++) {
       _spawnSegment(initialY: -80.0 - i * 140);
     }
+  }
+
+  List<Sprite> _spritesForMask() {
+    if (_obstacleSprites.isEmpty) return const [];
+    final picked = <Sprite>[];
+    for (var lane = 0; lane < GameConstants.laneCount; lane++) {
+      picked.add(
+        _obstacleSprites[_spriteRng.nextInt(_obstacleSprites.length)],
+      );
+    }
+    return picked;
   }
 
   @override
@@ -112,6 +151,7 @@ class OneGame extends FlameGame with TapCallbacks {
         originX: _originX,
         rowHeight: _rowHeight,
         color: obstacleColor,
+        sprites: _spritesForMask(),
       )..position = Vector2(0, y);
       _obstacles.add(row);
       add(row);

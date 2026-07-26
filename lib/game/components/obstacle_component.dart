@@ -12,6 +12,7 @@ class ObstacleRowComponent extends PositionComponent {
     required this.originX,
     required this.rowHeight,
     required this.color,
+    this.sprites = const [],
   });
 
   final int mask;
@@ -19,22 +20,44 @@ class ObstacleRowComponent extends PositionComponent {
   final double originX;
   final double rowHeight;
   final Color color;
+  final List<Sprite> sprites;
 
   bool get isOffscreen => position.y - rowHeight > 2000;
 
   @override
   void render(Canvas canvas) {
-    final paint = Paint()..color = color;
-    final h = rowHeight * 0.55;
+    final h = rowHeight * 0.7;
     for (var lane = 0; lane < GameConstants.laneCount; lane++) {
       if (!LaneMask.isBlocked(mask, lane)) continue;
-      final x = originX + lane * laneWidth + laneWidth * 0.12;
-      final w = laneWidth * 0.76;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x - position.x, -h / 2, w, h),
-        const Radius.circular(10),
-      );
-      canvas.drawRRect(rect, paint);
+      final x = originX + lane * laneWidth + laneWidth * 0.5 - position.x;
+      final sprite = sprites.isEmpty
+          ? null
+          : sprites[lane % sprites.length];
+      if (sprite != null) {
+        final maxW = laneWidth * 0.72;
+        final maxH = h;
+        final src = sprite.srcSize;
+        final scale = (maxW / src.x < maxH / src.y)
+            ? maxW / src.x
+            : maxH / src.y;
+        final dw = src.x * scale;
+        final dh = src.y * scale;
+        sprite.render(
+          canvas,
+          position: Vector2(x - dw / 2, -dh / 2),
+          size: Vector2(dw, dh),
+          overridePaint: Paint()..filterQuality = FilterQuality.none,
+        );
+      } else {
+        final paint = Paint()..color = color;
+        final ox = originX + lane * laneWidth + laneWidth * 0.12 - position.x;
+        final w = laneWidth * 0.76;
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(ox, -h / 2, w, h),
+          const Radius.circular(10),
+        );
+        canvas.drawRRect(rect, paint);
+      }
     }
   }
 
