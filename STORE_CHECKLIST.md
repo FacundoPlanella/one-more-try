@@ -60,16 +60,13 @@ Salida: `build/app/outputs/bundle/release/app-release.aab`
 - [ ] Descripción completa
 - [ ] Categoría: Arcade / Casual
 - [ ] Contacto de email
-- [ ] **URL de política de privacidad** (obligatoria con ads)
+- [x] **URL de política de privacidad** (obligatoria con ads)
 
-### Política de privacidad (mínimo)
+### Política de privacidad
 
-Debés hostear una página que diga:
+Publicada en: https://sites.google.com/view/onemoretry-privacy
 
-- La app guarda progreso **solo en el dispositivo**
-- Usa **Google AdMob** (puede recopilar datos según su política)
-- No hay cuenta de usuario / no hay IAP
-- Contacto del desarrollador
+Texto fuente: `PRIVACY_POLICY.md`. También enlazada dentro del juego en Settings → Privacy policy.
 
 ## 6. Formularios Play Console
 

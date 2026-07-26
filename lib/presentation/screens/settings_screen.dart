@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -78,17 +79,31 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           ListTile(
-            title: const Text('Privacy'),
+            title: const Text('Privacy policy'),
             subtitle: Text(
               'Progress is stored only on this device. '
-              'AdMob may collect data per Google policy. '
-              'Replace this text with your privacy policy URL before release.',
+              'AdMob may collect data per Google policy.',
               style: TextStyle(color: colors.text1, fontSize: 12),
             ),
+            trailing: Icon(Icons.open_in_new_rounded, color: colors.text1),
+            onTap: () => _openPrivacyPolicy(context),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await launchUrl(
+      Uri.parse(GameConstants.privacyPolicyUrl),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text(GameConstants.privacyPolicyUrl)),
+      );
+    }
   }
 
   String _themeLabel(String mode) {

@@ -5,6 +5,9 @@ class GameConstants {
 
   static const String appName = 'One more try.';
   static const String packageId = 'com.studio.onemoretry.game';
+  static const String privacyPolicyUrl =
+      'https://sites.google.com/view/onemoretry-privacy';
+  static const String supportEmail = 'enunfla.contact@gmail.com';
 
   /// Altura reservada para el banner AdMob + margen (dp lógicos).
   static const double bannerReservedHeight = 64;
