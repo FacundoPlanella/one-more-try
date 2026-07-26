@@ -1,0 +1,41 @@
+name: one_more_try
+description: "One more try. — casual one-tap endless lane game (offline, banner ads only)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flame: ^1.38.0
+  google_mobile_ads: ^9.0.0
+  shared_preferences: ^2.5.5
+  provider: ^6.1.5+1
+  audioplayers: ^6.8.1
+  google_fonts: ^8.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/app_icon.png
+  adaptive_icon_background: "#0B0D10"
+  adaptive_icon_foreground: assets/branding/app_icon.png
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/music_loop.wav
+    - assets/audio/sfx/tap.wav
+    - assets/audio/sfx/orb.wav
+    - assets/audio/sfx/die.wav
+    - assets/audio/sfx/best.wav
+    - assets/branding/app_icon.png
