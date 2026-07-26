@@ -78,22 +78,13 @@ class _GameScreenState extends State<GameScreen> {
     }
   }
 
-  _GameColors _resolveColors(AppController app) {
-    // Usa tema oscuro de juego estable (mejor contraste en motion).
-    final isLight = app.save.themeMode == 'light';
-    if (isLight) {
-      return const _GameColors(
-        bg: Color(0xFFF3F5F7),
-        lane: Color(0xFFD7DEE5),
-        obstacle: Color(0xFF64748B),
-        accent: Color(0xFF0F766E),
-      );
-    }
+  _GameColors _resolveColors(AppController _) {
+    // Campo nocturno: césped oscuro (independiente del tema de menú).
     return const _GameColors(
-      bg: Color(0xFF0B0D10),
-      lane: Color(0xFF1F2933),
-      obstacle: Color(0xFF2A3441),
-      accent: Color(0xFF5EEAD4),
+      bg: Color(0xFF0B1A14),
+      lane: Color(0xFF1A3326),
+      obstacle: Color(0xFF163528),
+      accent: Color(0xFFA7F3D0),
     );
   }
 

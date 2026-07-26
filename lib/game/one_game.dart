@@ -60,43 +60,37 @@ class OneGame extends FlameGame with TapCallbacks {
   double _spawnTimer = 0;
   double _dieTimer = 0;
   double _pulse = 0;
+  double _scrollOffset = 0;
 
   final List<ObstacleRowComponent> _obstacles = [];
   final List<OrbComponent> _orbs = [];
-  final List<Sprite> _obstacleSprites = [];
-  final Random _spriteRng = Random();
+  final List<Sprite> _treeSprites = [];
 
-  static const List<String> _obstacleAssetNames = [
-    'creatures/obstacles/obstacle_0.png',
-    'creatures/obstacles/obstacle_1.png',
-    'creatures/obstacles/obstacle_2.png',
-    'creatures/obstacles/obstacle_3.png',
-    'creatures/obstacles/obstacle_4.png',
-    'creatures/obstacles/obstacle_5.png',
-    'creatures/obstacles/obstacle_6.png',
-    'creatures/obstacles/obstacle_7.png',
-    'creatures/obstacles/obstacle_8.png',
-    'creatures/obstacles/obstacle_9.png',
-    'creatures/obstacles/obstacle_10.png',
-    'creatures/obstacles/obstacle_11.png',
+  static const List<String> _treeAssetNames = [
+    'nature/trees/pine_0.png',
+    'nature/trees/pine_1.png',
+    'nature/trees/pine_2.png',
+    'nature/trees/pine_3.png',
+    'nature/trees/pine_4.png',
+    'nature/trees/pine_5.png',
+    'nature/trees/pine_6.png',
+    'nature/trees/pine_7.png',
   ];
 
   double get _laneWidth => size.x / GameConstants.laneCount;
   double get _originX => 0;
-  double get _rowHeight => 56;
+  double get _rowHeight => 64;
 
   @override
   Color backgroundColor() => bgColor;
 
   @override
   Future<void> onLoad() async {
-    for (final name in _obstacleAssetNames) {
+    for (final name in _treeAssetNames) {
       try {
         final image = await Flame.images.load(name);
-        _obstacleSprites.add(Sprite(image));
-      } catch (_) {
-        // Keep geometric fallback if a sprite fails to load.
-      }
+        _treeSprites.add(Sprite(image));
+      } catch (_) {}
     }
 
     generator = SegmentGenerator(runSeed: runSeed);
@@ -110,17 +104,6 @@ class OneGame extends FlameGame with TapCallbacks {
     for (var i = 0; i < 5; i++) {
       _spawnSegment(initialY: -80.0 - i * 140);
     }
-  }
-
-  List<Sprite> _spritesForMask() {
-    if (_obstacleSprites.isEmpty) return const [];
-    final picked = <Sprite>[];
-    for (var lane = 0; lane < GameConstants.laneCount; lane++) {
-      picked.add(
-        _obstacleSprites[_spriteRng.nextInt(_obstacleSprites.length)],
-      );
-    }
-    return picked;
   }
 
   @override
@@ -151,7 +134,7 @@ class OneGame extends FlameGame with TapCallbacks {
         originX: _originX,
         rowHeight: _rowHeight,
         color: obstacleColor,
-        sprites: _spritesForMask(),
+        treeSprites: _treeSprites,
       )..position = Vector2(0, y);
       _obstacles.add(row);
       add(row);
@@ -190,6 +173,8 @@ class OneGame extends FlameGame with TapCallbacks {
     final d = curve.difficultyForScore(score);
     final speed = curve.scrollSpeed(d);
     final gap = curve.gapSeconds(d);
+
+    _scrollOffset = (_scrollOffset + speed * dt) % 64;
 
     for (final o in _obstacles) {
       o.position.y += speed * dt;
@@ -249,35 +234,89 @@ class OneGame extends FlameGame with TapCallbacks {
     _dieTimer = 0;
   }
 
-  @override
-  void render(Canvas canvas) {
-    final rect = Offset.zero & Size(size.x, size.y);
+  void _drawNightGrass(Canvas canvas, Size screen) {
+    final rect = Offset.zero & screen;
+
     canvas.drawRect(
       rect,
       Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            bgColor,
-            Color.lerp(bgColor, accentColor, 0.06)!,
+            Color(0xFF071018),
+            Color(0xFF0B1A14),
+            Color(0xFF102418),
+            Color(0xFF0E1F15),
           ],
+          stops: [0.0, 0.28, 0.7, 1.0],
         ).createShader(rect),
     );
 
+    // Soft drifting moss patches (no grid).
+    final patch = Paint()..color = const Color(0x0C1F4A34);
+    for (var i = 0; i < 18; i++) {
+      final x = ((i * 73) % 97) / 97.0 * screen.width;
+      final y =
+          (((i * 41) % 83) / 83.0 * screen.height + _scrollOffset * 0.35) %
+              (screen.height + 40) -
+          20;
+      final rw = 40.0 + (i % 5) * 12;
+      final rh = 18.0 + (i % 3) * 8;
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(x, y), width: rw, height: rh),
+        patch,
+      );
+    }
+
+    // Sparse irregular grass tips (not aligned to a grid).
+    final blade = Paint()
+      ..color = const Color(0x2816A34A)
+      ..strokeWidth = 1.3
+      ..strokeCap = StrokeCap.round;
+    for (var i = 0; i < 55; i++) {
+      final x = ((i * 97 + 13) % 200) / 200.0 * screen.width;
+      final base =
+          (((i * 53 + 7) % 160) / 160.0 * screen.height - _scrollOffset) %
+              (screen.height + 30);
+      final h = 4.0 + (i % 4);
+      final lean = ((i % 5) - 2).toDouble();
+      canvas.drawLine(Offset(x, base), Offset(x + lean, base - h), blade);
+    }
+
+    // Subtle lane hints in deep green (no gray lines).
     final lanePaint = Paint()
-      ..color = laneColor.withValues(alpha: 0.85)
-      ..strokeWidth = 1.2;
+      ..color = const Color(0x221A3326)
+      ..strokeWidth = 2;
     for (var i = 1; i < GameConstants.laneCount; i++) {
       final x = _laneWidth * i;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.y), lanePaint);
+      canvas.drawLine(Offset(x, 0), Offset(x, screen.height), lanePaint);
     }
+
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(0, -0.15),
+          radius: 1.15,
+          colors: [
+            Color(0x00000000),
+            Color(0x55000000),
+          ],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  void render(Canvas canvas) {
+    final screen = Size(size.x, size.y);
+    _drawNightGrass(canvas, screen);
 
     super.render(canvas);
 
     if (state == OneGameState.dying && !reduceMotion) {
       canvas.drawRect(
-        rect,
+        Offset.zero & screen,
         Paint()..color = const Color(0x33FB7185),
       );
     }
@@ -286,11 +325,11 @@ class OneGame extends FlameGame with TapCallbacks {
       final a = (sin(_pulse * 2) + 1) * 0.5;
       canvas.drawCircle(
         Offset(player.position.x, player.position.y),
-        GameConstants.playerRadius + 6 + a * 3,
+        GameConstants.playerRadius + 8 + a * 3,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5
-          ..color = accentColor.withValues(alpha: 0.15 + a * 0.1),
+          ..color = accentColor.withValues(alpha: 0.18 + a * 0.12),
       );
     }
   }

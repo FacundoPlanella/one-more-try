@@ -12,7 +12,7 @@ class ObstacleRowComponent extends PositionComponent {
     required this.originX,
     required this.rowHeight,
     required this.color,
-    this.sprites = const [],
+    this.treeSprites = const [],
   });
 
   final int mask;
@@ -20,45 +20,76 @@ class ObstacleRowComponent extends PositionComponent {
   final double originX;
   final double rowHeight;
   final Color color;
-  final List<Sprite> sprites;
+  final List<Sprite> treeSprites;
 
   bool get isOffscreen => position.y - rowHeight > 2000;
 
+  Sprite? _spriteForLane(int lane) {
+    if (treeSprites.isEmpty) return null;
+    final idx = (mask * 17 + lane * 13).abs() % treeSprites.length;
+    return treeSprites[idx];
+  }
+
   @override
   void render(Canvas canvas) {
-    final h = rowHeight * 0.7;
     for (var lane = 0; lane < GameConstants.laneCount; lane++) {
       if (!LaneMask.isBlocked(mask, lane)) continue;
-      final x = originX + lane * laneWidth + laneWidth * 0.5 - position.x;
-      final sprite = sprites.isEmpty
-          ? null
-          : sprites[lane % sprites.length];
+      final cx = originX + lane * laneWidth + laneWidth * 0.5 - position.x;
+      final sprite = _spriteForLane(lane);
       if (sprite != null) {
-        final maxW = laneWidth * 0.72;
-        final maxH = h;
-        final src = sprite.srcSize;
-        final scale = (maxW / src.x < maxH / src.y)
-            ? maxW / src.x
-            : maxH / src.y;
-        final dw = src.x * scale;
-        final dh = src.y * scale;
-        sprite.render(
-          canvas,
-          position: Vector2(x - dw / 2, -dh / 2),
-          size: Vector2(dw, dh),
-          overridePaint: Paint()..filterQuality = FilterQuality.none,
-        );
+        _drawTreeSprite(canvas, cx, sprite);
       } else {
-        final paint = Paint()..color = color;
-        final ox = originX + lane * laneWidth + laneWidth * 0.12 - position.x;
-        final w = laneWidth * 0.76;
-        final rect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(ox, -h / 2, w, h),
-          const Radius.circular(10),
-        );
-        canvas.drawRRect(rect, paint);
+        _drawFallbackTree(canvas, cx, lane);
       }
     }
+  }
+
+  void _drawTreeSprite(Canvas canvas, double cx, Sprite sprite) {
+    final maxW = laneWidth * 0.86;
+    final maxH = rowHeight * 1.85;
+    final src = sprite.srcSize;
+    final scale = (maxW / src.x < maxH / src.y) ? maxW / src.x : maxH / src.y;
+    final dw = src.x * scale;
+    final dh = src.y * scale;
+    // Anchor near the base so the trunk sits on the collision band.
+    sprite.render(
+      canvas,
+      position: Vector2(cx - dw / 2, -dh * 0.72),
+      size: Vector2(dw, dh),
+      overridePaint: Paint()..filterQuality = FilterQuality.medium,
+    );
+  }
+
+  void _drawFallbackTree(Canvas canvas, double cx, int lane) {
+    final scale = 0.9 + ((mask + lane) % 3) * 0.08;
+    final trunkW = laneWidth * 0.12 * scale;
+    final trunkH = rowHeight * 0.42 * scale;
+    final canopyR = laneWidth * 0.28 * scale;
+
+    final trunk = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(cx, trunkH * 0.15),
+        width: trunkW,
+        height: trunkH,
+      ),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(trunk, Paint()..color = const Color(0xFF3B2A1A));
+
+    final canopyPaint = Paint()..color = const Color(0xFF163528);
+    final canopyDark = Paint()..color = const Color(0xFF0E2418);
+    final top = Offset(cx, -canopyR * 0.55);
+    canvas.drawCircle(
+      top.translate(-canopyR * 0.35, canopyR * 0.2),
+      canopyR * 0.85,
+      canopyDark,
+    );
+    canvas.drawCircle(
+      top.translate(canopyR * 0.35, canopyR * 0.25),
+      canopyR * 0.8,
+      canopyDark,
+    );
+    canvas.drawCircle(top, canopyR, canopyPaint);
   }
 
   /// Colisión por carril con perdón horizontal.
@@ -114,8 +145,13 @@ class OrbComponent extends PositionComponent {
     if (collected) return;
     canvas.drawCircle(
       Offset.zero,
+      10,
+      Paint()..color = color.withValues(alpha: 0.18),
+    );
+    canvas.drawCircle(
+      Offset.zero,
       7,
-      Paint()..color = color.withValues(alpha: 0.9),
+      Paint()..color = color.withValues(alpha: 0.95),
     );
     canvas.drawCircle(
       Offset.zero,
@@ -123,7 +159,7 @@ class OrbComponent extends PositionComponent {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5
-        ..color = color.withValues(alpha: 0.35),
+        ..color = color.withValues(alpha: 0.4),
     );
   }
 }
