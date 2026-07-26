@@ -1,5 +1,6 @@
-# Copia a: android/key.properties (no versionar)
-# storePassword=tu_password
-# keyPassword=tu_password
-# keyAlias=upload
-# storeFile=../keystore/upload-keystore.jks
+# Copia este archivo a: android/key.properties (NO se versiona)
+# storePassword y keyPassword pueden ser la misma contraseña.
+storePassword=TU_PASSWORD_AQUI
+keyPassword=TU_PASSWORD_AQUI
+keyAlias=upload
+storeFile=../keystore/upload-keystore.jks

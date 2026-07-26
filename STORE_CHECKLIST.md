@@ -10,22 +10,31 @@ Package: `com.studio.onemoretry.one_more_try`
 
 ## 2. Firma de la app (obligatorio)
 
-Generar keystore de upload (una sola vez, **guardalo seguro**):
+Generar keystore de upload (una sola vez, **guardalo seguro + backup**):
 
-```bash
-keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```powershell
+cd d:\Juegos\One\one_more_try\android\keystore
+& "C:\Program Files\Microsoft\jdk-17.0.19.10-hotspot\bin\keytool.exe" `
+  -genkey -v `
+  -keystore upload-keystore.jks `
+  -storetype JKS `
+  -keyalg RSA `
+  -keysize 2048 `
+  -validity 10000 `
+  -alias upload `
+  -dname "CN=Facundo Sebastian Planella, OU=Planella, O=Planella, L=Buenos Aires, ST=Buenos Aires, C=AR"
 ```
 
-Crear `android/key.properties` (no se sube al repo):
+Crear `android/key.properties` desde `android/key.properties.example` (no se sube al repo):
 
 ```
 storePassword=...
 keyPassword=...
 keyAlias=upload
-storeFile=../upload-keystore.jks
+storeFile=../keystore/upload-keystore.jks
 ```
 
-Luego conectar esa firma en `android/app/build.gradle.kts` (hoy usa firma debug).
+`android/app/build.gradle.kts` ya usa esa firma automáticamente si existe `key.properties`.
 
 Build de producción:
 
