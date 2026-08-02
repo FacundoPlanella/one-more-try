@@ -1,7 +1,7 @@
 # Google Play — checklist de publicación
 
 App: **One more try.**  
-Package: `com.studio.onemoretry.one_more_try`
+Package: `one.more.try`
 
 ## 1. Cuenta y costos
 

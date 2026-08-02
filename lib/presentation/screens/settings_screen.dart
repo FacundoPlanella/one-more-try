@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
 import 'credits_screen.dart';
@@ -11,45 +12,53 @@ import 'credits_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  static const _languageNames = {
+    'en': 'English',
+    'es': 'Español',
+    'pt': 'Português',
+    'zh': '中文',
+  };
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
     final save = app.save;
     final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
 
     return BannerScaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(t.settingsTitle)),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 24),
         children: [
           SwitchListTile(
-            title: const Text('Music'),
+            title: Text(t.music),
             value: save.music,
             activeThumbColor: colors.accent,
             onChanged: app.setMusic,
           ),
           SwitchListTile(
-            title: const Text('Sound effects'),
+            title: Text(t.soundEffects),
             value: save.sfx,
             activeThumbColor: colors.accent,
             onChanged: app.setSfx,
           ),
           SwitchListTile(
-            title: const Text('Haptics'),
+            title: Text(t.haptics),
             value: save.haptics,
             activeThumbColor: colors.accent,
             onChanged: app.setHaptics,
           ),
           SwitchListTile(
-            title: const Text('Reduce motion'),
+            title: Text(t.reduceMotion),
             value: save.reduceMotion,
             activeThumbColor: colors.accent,
             onChanged: app.setReduceMotion,
           ),
           const Divider(),
           ListTile(
-            title: const Text('Theme'),
-            subtitle: Text(_themeLabel(save.themeMode)),
+            title: Text(t.theme),
+            subtitle: Text(_themeLabel(t, save.themeMode)),
             trailing: Icon(Icons.chevron_right_rounded, color: colors.text1),
             onTap: () async {
               final next = await showModalBottomSheet<String>(
@@ -61,7 +70,7 @@ class SettingsScreen extends StatelessWidget {
                     children: [
                       for (final mode in ['dark', 'light', 'system'])
                         ListTile(
-                          title: Text(_themeLabel(mode)),
+                          title: Text(_themeLabel(t, mode)),
                           onTap: () => Navigator.pop(context, mode),
                         ),
                     ],
@@ -71,18 +80,42 @@ class SettingsScreen extends StatelessWidget {
               if (next != null) await app.setThemeMode(next);
             },
           ),
+          ListTile(
+            title: Text(t.language),
+            subtitle: Text(_languageNames[save.languageCode] ?? 'English'),
+            trailing: Icon(Icons.chevron_right_rounded, color: colors.text1),
+            onTap: () async {
+              final next = await showModalBottomSheet<String>(
+                context: context,
+                backgroundColor: colors.bg1,
+                builder: (context) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final code in _languageNames.keys)
+                        ListTile(
+                          title: Text(_languageNames[code]!),
+                          onTap: () => Navigator.pop(context, code),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+              if (next != null) await app.setLanguageCode(next);
+            },
+          ),
           const Divider(),
           ListTile(
-            title: const Text('About'),
+            title: Text(t.about),
             subtitle: Text(
-              '${GameConstants.appName}\nOffline · Banner ads only · v1.0.0',
+              t.aboutSubtitle(GameConstants.appName),
               style: TextStyle(color: colors.text1),
             ),
           ),
           ListTile(
-            title: const Text('Credits'),
+            title: Text(t.credits),
             subtitle: Text(
-              'Art by Shade · Philippine Myth Creatures',
+              t.creditsSubtitle,
               style: TextStyle(color: colors.text1, fontSize: 12),
             ),
             trailing: Icon(Icons.chevron_right_rounded, color: colors.text1),
@@ -95,10 +128,9 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
           ListTile(
-            title: const Text('Privacy policy'),
+            title: Text(t.privacyPolicy),
             subtitle: Text(
-              'Progress is stored only on this device. '
-              'AdMob may collect data per Google policy.',
+              t.privacyPolicySubtitle,
               style: TextStyle(color: colors.text1, fontSize: 12),
             ),
             trailing: Icon(Icons.open_in_new_rounded, color: colors.text1),
@@ -122,14 +154,14 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-  String _themeLabel(String mode) {
+  String _themeLabel(AppLocalizations t, String mode) {
     switch (mode) {
       case 'light':
-        return 'Light';
+        return t.themeLight;
       case 'system':
-        return 'System';
+        return t.themeSystem;
       default:
-        return 'Dark';
+        return t.themeDark;
     }
   }
 }

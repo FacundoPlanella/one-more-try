@@ -8,6 +8,7 @@ class RunResult {
     required this.score,
     required this.durationSec,
     required this.orbsCollected,
+    required this.coinsCollected,
     required this.deathLane,
     required this.collectedAnyOrb,
   });
@@ -15,6 +16,7 @@ class RunResult {
   final int score;
   final double durationSec;
   final int orbsCollected;
+  final int coinsCollected;
   final int deathLane;
   final bool collectedAnyOrb;
 }
@@ -48,6 +50,8 @@ class ProgressionService {
     save.totalGames += 1;
     save.totalPlayTimeSec += run.durationSec;
     save.totalOrbs += run.orbsCollected;
+    save.coins += run.coinsCollected;
+    save.totalCoinsEarned += run.coinsCollected;
     if (run.deathLane >= 0 && run.deathLane < save.deathsPerLane.length) {
       save.deathsPerLane[run.deathLane] += 1;
     }
@@ -168,6 +172,8 @@ class ProgressionService {
     if (save.dailyMissionsCompleted >= 7) grant('daily_7');
     if (save.nearMissCount >= 10) grant('near_miss');
     if (run.score >= 150 && !run.collectedAnyOrb) grant('no_collect');
+    if (save.totalCoinsEarned >= 10000) grant('coins_100');
+    if (save.totalCoinsEarned >= 50000) grant('coins_500');
   }
 
   String? _updateTitle(SaveData save) {

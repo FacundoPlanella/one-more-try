@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
 import 'credits_screen.dart';
@@ -63,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const BrandTitle(),
             const SizedBox(height: 12),
             Text(
-              'One tap. One life.',
+              AppLocalizations.of(context).appTagline,
               style: GoogleFonts.manrope(
                 color: colors.text1,
                 fontSize: 15,

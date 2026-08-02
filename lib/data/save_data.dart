@@ -8,8 +8,11 @@ class SaveData {
     this.totalGames = 0,
     this.totalPlayTimeSec = 0,
     this.totalOrbs = 0,
+    this.coins = 0,
+    this.totalCoinsEarned = 0,
     List<String>? unlockedSkins,
     this.equippedSkin = 'default',
+    List<String>? purchasedPerks,
     List<String>? medals,
     this.titleId = 'novato',
     List<int>? deathsPerLane,
@@ -26,10 +29,12 @@ class SaveData {
     this.music = true,
     this.sfx = true,
     this.themeMode = 'dark',
+    this.languageCode = 'en',
     this.reduceMotion = false,
     this.haptics = true,
     this.tutorialDone = false,
   })  : unlockedSkins = unlockedSkins ?? ['default'],
+        purchasedPerks = purchasedPerks ?? [],
         medals = medals ?? [],
         deathsPerLane = deathsPerLane ?? [0, 0, 0],
         recentScores = recentScores ?? [];
@@ -39,8 +44,11 @@ class SaveData {
   int totalGames;
   double totalPlayTimeSec;
   int totalOrbs;
+  int coins;
+  int totalCoinsEarned;
   List<String> unlockedSkins;
   String equippedSkin;
+  List<String> purchasedPerks;
   List<String> medals;
   String titleId;
   List<int> deathsPerLane;
@@ -57,6 +65,7 @@ class SaveData {
   bool music;
   bool sfx;
   String themeMode;
+  String languageCode;
   bool reduceMotion;
   bool haptics;
   bool tutorialDone;
@@ -73,8 +82,11 @@ class SaveData {
         'totalGames': totalGames,
         'totalPlayTimeSec': totalPlayTimeSec,
         'totalOrbs': totalOrbs,
+        'coins': coins,
+        'totalCoinsEarned': totalCoinsEarned,
         'unlockedSkins': unlockedSkins,
         'equippedSkin': equippedSkin,
+        'purchasedPerks': purchasedPerks,
         'medals': medals,
         'titleId': titleId,
         'deathsPerLane': deathsPerLane,
@@ -91,6 +103,7 @@ class SaveData {
         'music': music,
         'sfx': sfx,
         'themeMode': themeMode,
+        'languageCode': languageCode,
         'reduceMotion': reduceMotion,
         'haptics': haptics,
         'tutorialDone': tutorialDone,
@@ -103,11 +116,17 @@ class SaveData {
       totalGames: json['totalGames'] as int? ?? 0,
       totalPlayTimeSec: (json['totalPlayTimeSec'] as num?)?.toDouble() ?? 0,
       totalOrbs: json['totalOrbs'] as int? ?? 0,
+      coins: json['coins'] as int? ?? 0,
+      totalCoinsEarned: json['totalCoinsEarned'] as int? ?? 0,
       unlockedSkins: (json['unlockedSkins'] as List?)
               ?.map((e) => e.toString())
               .toList() ??
           ['default'],
       equippedSkin: json['equippedSkin'] as String? ?? 'default',
+      purchasedPerks: (json['purchasedPerks'] as List?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       medals:
           (json['medals'] as List?)?.map((e) => e.toString()).toList() ?? [],
       titleId: json['titleId'] as String? ?? 'novato',
@@ -131,6 +150,7 @@ class SaveData {
       music: json['music'] as bool? ?? true,
       sfx: json['sfx'] as bool? ?? true,
       themeMode: json['themeMode'] as String? ?? 'dark',
+      languageCode: json['languageCode'] as String? ?? 'en',
       reduceMotion: json['reduceMotion'] as bool? ?? false,
       haptics: json['haptics'] as bool? ?? true,
       tutorialDone: json['tutorialDone'] as bool? ?? false,

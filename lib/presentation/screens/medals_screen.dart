@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/catalogs/progression_catalogs.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
+import '../widgets/catalog_labels.dart';
 import '../widgets/common_widgets.dart';
 
 class MedalsScreen extends StatelessWidget {
@@ -14,14 +16,15 @@ class MedalsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final save = context.watch<AppController>().save;
     final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
 
     return BannerScaffold(
-      appBar: AppBar(title: const Text('Medals & Titles')),
+      appBar: AppBar(title: Text(t.medalsTitle)),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         children: [
           Text(
-            'Title: ${_titleName(save.titleId)}',
+            t.titlePrefix(TitleLabel.resolve(context, save.titleId)),
             style: GoogleFonts.outfit(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -54,14 +57,14 @@ class MedalsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            medal.name,
+                            MedalLabels.name(context, medal.id),
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.w700,
                               color: unlocked ? colors.text0 : colors.text1,
                             ),
                           ),
                           Text(
-                            medal.description,
+                            MedalLabels.description(context, medal.id),
                             style: GoogleFonts.manrope(
                               color: colors.text1,
                               fontSize: 13,
@@ -78,10 +81,5 @@ class MedalsScreen extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _titleName(String id) {
-    final match = TitleCatalog.all.where((t) => t.id == id);
-    return match.isEmpty ? 'Novice' : match.first.name;
   }
 }

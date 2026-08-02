@@ -24,7 +24,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.studio.onemoretry.one_more_try"
+        // Debe coincidir con el package creado en Play Console.
+        applicationId = "one.more.try"
         // google_mobile_ads requiere minSdk 23.
         minSdk = flutter.minSdkVersion
         targetSdk = 36

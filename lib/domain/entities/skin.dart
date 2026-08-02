@@ -15,6 +15,7 @@ class SkinDef {
     this.unlockBestScore,
     this.unlockGamesPlayed,
     this.unlockDailyStreak,
+    this.priceCoins,
   });
 
   final String id;
@@ -35,12 +36,9 @@ class SkinDef {
   final int? unlockGamesPlayed;
   final int? unlockDailyStreak;
 
-  String get unlockHint {
-    if (unlockBestScore != null) return 'Best score ≥ ${unlockBestScore!}';
-    if (unlockGamesPlayed != null) return '${unlockGamesPlayed!} games';
-    if (unlockDailyStreak != null) {
-      return '${unlockDailyStreak!} daily missions';
-    }
-    return 'Unlocked';
-  }
+  /// Si no es null, esta skin se compra en la Tienda con monedas en vez de
+  /// desbloquearse por progreso.
+  final int? priceCoins;
+
+  bool get isShopExclusive => priceCoins != null;
 }

@@ -85,6 +85,76 @@ class SkinCatalog {
       spriteAsset: '$_players/prism.png',
       unlockBestScore: 1000,
     ),
+    // Exclusivas de Tienda: se compran con monedas, no por progreso.
+    SkinDef(
+      id: 'shop_diwata',
+      name: 'Diwata',
+      creatureName: 'Diwata (Nature spirit)',
+      color: Color(0xFF4ADE80),
+      spriteAsset: '$_players/shop_diwata.png',
+      priceCoins: 8000,
+    ),
+    SkinDef(
+      id: 'shop_tiyanak',
+      name: 'Tiyanak',
+      creatureName: 'Tiyanak (Vampiric infant)',
+      color: Color(0xFFA855F7),
+      spriteAsset: '$_players/shop_tiyanak.png',
+      priceCoins: 13000,
+    ),
+    SkinDef(
+      id: 'shop_sigbin',
+      name: 'Sigbin',
+      creatureName: 'Sigbin (Shadow beast)',
+      color: Color(0xFF92400E),
+      secondary: Color(0xFF44403C),
+      spriteAsset: '$_players/shop_sigbin.png',
+      priceCoins: 18000,
+    ),
+    SkinDef(
+      id: 'shop_kataw',
+      name: 'Kataw',
+      creatureName: 'Kataw (Merman)',
+      color: Color(0xFF0284C7),
+      spriteAsset: '$_players/shop_kataw.png',
+      priceCoins: 23000,
+    ),
+    SkinDef(
+      id: 'shop_engkanto',
+      name: 'Engkanto',
+      creatureName: 'Engkanto (Enchanted being)',
+      color: Color(0xFFF9A8D4),
+      spriteAsset: '$_players/shop_engkanto.png',
+      priceCoins: 28000,
+    ),
+    SkinDef(
+      id: 'shop_manananggal',
+      name: 'Manananggal',
+      creatureName: 'Manananggal',
+      color: Color(0xFFEF4444),
+      secondary: Color(0xFF1F2937),
+      spriteAsset: '$_players/shop_manananggal.png',
+      priceCoins: 33000,
+    ),
+    SkinDef(
+      id: 'shop_amalanhig',
+      name: 'Amalanhig',
+      creatureName: 'Amalanhig (Walking dead)',
+      color: Color(0xFFFBBF24),
+      secondary: Color(0xFFDC2626),
+      spriteAsset: '$_players/shop_amalanhig.png',
+      priceCoins: 40000,
+    ),
+    SkinDef(
+      id: 'shop_bakunawa',
+      name: 'Bakunawa',
+      creatureName: 'Bakunawa (Moon serpent)',
+      color: Color(0xFF0EA5E9),
+      secondary: Color(0xFFFACC15),
+      prism: true,
+      spriteAsset: '$_players/shop_bakunawa.png',
+      priceCoins: 48000,
+    ),
   ];
 
   static SkinDef byId(String id) =>
@@ -95,6 +165,8 @@ class SkinCatalog {
     required int gamesPlayed,
     required int dailyMissionsCompleted,
   }) {
+    // Las skins de Tienda solo se desbloquean comprándolas, nunca por progreso.
+    if (skin.isShopExclusive) return false;
     if (skin.unlockBestScore == null &&
         skin.unlockGamesPlayed == null &&
         skin.unlockDailyStreak == null) {

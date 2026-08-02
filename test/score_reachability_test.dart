@@ -66,14 +66,15 @@ class PerfectRunSimulator {
         }
       }
 
-      if (segment.hasOrb && segment.orbLane == playerLane) {
+      final isScorePickup = segment.pickupType == PickupType.score;
+      if (isScorePickup && segment.pickupLane == playerLane) {
         orbsCollected++;
         combo++;
         score += GameConstants.orbScore.toDouble();
         if (combo % GameConstants.comboEvery == 0) {
           score += 1;
         }
-      } else if (segment.hasOrb) {
+      } else if (isScorePickup) {
         // Orbe en otro carril: el jugador perfecto prioriza sobrevivir.
         combo = 0;
       }

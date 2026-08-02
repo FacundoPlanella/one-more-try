@@ -9,6 +9,7 @@ import '../core/constants/game_constants.dart';
 /// Solo banner inferior. Nunca interstitial / rewarded.
 class AdsService extends ChangeNotifier {
   BannerAd? _banner;
+  Widget? _adWidget;
   bool _initialized = false;
   bool _available = true;
   bool _loaded = false;
@@ -42,12 +43,15 @@ class AdsService extends ChangeNotifier {
       listener: BannerAdListener(
         onAdLoaded: (ad) {
           _loaded = true;
+          // Una sola instancia de AdWidget — no recrear en cada build.
+          _adWidget = AdWidget(ad: ad as BannerAd);
           notifyListeners();
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
           if (identical(_banner, ad)) {
             _banner = null;
+            _adWidget = null;
             _loaded = false;
           }
           notifyListeners();
@@ -57,22 +61,26 @@ class AdsService extends ChangeNotifier {
     );
     _banner = ad;
     _loaded = false;
+    _adWidget = null;
     await ad.load();
   }
 
   /// Altura siempre reservada → cero layout jump (GDD §16).
-  Widget bannerWidget() {
-    final ad = _banner;
+  /// [active] debe ser true solo en la ruta visible (evita AdWidget duplicado).
+  Widget bannerWidget({bool active = true}) {
     return SizedBox(
       height: GameConstants.bannerReservedHeight,
       width: double.infinity,
-      child: (ad != null && _loaded) ? AdWidget(ad: ad) : const SizedBox.shrink(),
+      child: (active && _loaded && _adWidget != null)
+          ? _adWidget!
+          : const SizedBox.shrink(),
     );
   }
 
   Future<void> disposeBanner() async {
     await _banner?.dispose();
     _banner = null;
+    _adWidget = null;
     _loaded = false;
   }
 }

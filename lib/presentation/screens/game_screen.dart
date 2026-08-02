@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../domain/catalogs/perk_catalog.dart';
 import '../../domain/progression/progression_service.dart';
 import '../../game/one_game.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
 import 'result_screen.dart';
@@ -19,33 +23,52 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   int _score = 0;
+  int _coins = 0;
   bool _ended = false;
   late OneGame _game;
+  Timer? _hudTimer;
 
   @override
   void initState() {
     super.initState();
     final app = context.read<AppController>();
-    final colors = _resolveColors(app);
+    final activePerks = app.save.purchasedPerks
+        .map((id) => PerkCatalog.byId(id).effect)
+        .toSet();
     _game = OneGame(
       skinId: app.save.equippedSkin,
-      bgColor: colors.bg,
-      laneColor: colors.lane,
-      obstacleColor: colors.obstacle,
-      accentColor: colors.accent,
+      accentColor: const Color(0xFF5EEAD4),
       reduceMotion: app.save.reduceMotion,
+      activePerks: activePerks,
       onScore: (s) {
-        if (mounted) setState(() => _score = s);
+        if (!mounted || s == _score) return;
+        // Evita setState durante el build del GameWidget/LayoutBuilder.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && s != _score) {
+            setState(() => _score = s);
+          }
+        });
       },
       onOrb: () {
         app.audio.playOrb();
         app.haptics.light();
       },
+      onCoin: () {
+        app.audio.playOrb();
+        app.haptics.light();
+        if (!mounted) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          // Refleja el valor real acumulado (coinValue, perks, ×2), no la
+          // cantidad de toques: si no, el HUD muestra "+1 por moneda" en
+          // vez del total real y el número salta recién al terminar.
+          if (mounted) setState(() => _coins = _game.coins);
+        });
+      },
       onTapLane: () {
         app.audio.playTap();
         app.haptics.light();
       },
-      onDeath: (score, duration, orbs, lane) {
+      onDeath: (score, duration, orbs, coins, lane) {
         if (_ended || !mounted) return;
         _ended = true;
         app.audio.playDie();
@@ -56,42 +79,48 @@ class _GameScreenState extends State<GameScreen> {
             score: score,
             durationSec: duration,
             orbsCollected: orbs,
+            coinsCollected: coins,
             deathLane: lane,
             collectedAnyOrb: collected,
           ),
         );
         if (result.newBest) app.audio.playBest();
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder<void>(
-            pageBuilder: (_, _, _) => ResultScreen(
-              score: score,
-              apply: result,
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder<void>(
+              pageBuilder: (_, _, _) => ResultScreen(
+                score: score,
+                coins: coins,
+                apply: result,
+              ),
+              transitionsBuilder: (_, anim, _, child) =>
+                  FadeTransition(opacity: anim, child: child),
             ),
-            transitionsBuilder: (_, anim, _, child) =>
-                FadeTransition(opacity: anim, child: child),
-          ),
-        );
+          );
+        });
       },
     );
     if (!app.save.tutorialDone) {
       _game.paused = true;
     }
+    // Refresca los indicadores de poder activo (no tienen su propio callback).
+    _hudTimer = Timer.periodic(const Duration(milliseconds: 150), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
-  _GameColors _resolveColors(AppController _) {
-    // Campo nocturno: césped oscuro (independiente del tema de menú).
-    return const _GameColors(
-      bg: Color(0xFF0B1A14),
-      lane: Color(0xFF1A3326),
-      obstacle: Color(0xFF163528),
-      accent: Color(0xFFA7F3D0),
-    );
+  @override
+  void dispose() {
+    _hudTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
     final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
 
     return BannerScaffold(
       child: Stack(
@@ -100,30 +129,59 @@ class _GameScreenState extends State<GameScreen> {
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Row(
+              child: Column(
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: Icon(Icons.close_rounded, color: colors.text1),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '$_score',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.outfit(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w700,
-                        color: colors.text0,
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(Icons.close_rounded, color: colors.text1),
                       ),
-                    ),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            Builder(
+                              builder: (context) {
+                                final multiplierOn = _game.multiplierTimer > 0;
+                                return AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 150),
+                                  style: GoogleFonts.outfit(
+                                    fontSize: multiplierOn ? 42 : 36,
+                                    fontWeight: FontWeight.w700,
+                                    color: multiplierOn
+                                        ? const Color(0xFFF472B6)
+                                        : colors.text0,
+                                  ),
+                                  child: Text(
+                                    multiplierOn ? '$_score  ✖2' : '$_score',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                );
+                              },
+                            ),
+                            CoinLabel(
+                              amount: _coins,
+                              iconSize: 14,
+                              style: GoogleFonts.manrope(
+                                color: colors.text1,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        t.bestScoreLabel(app.save.bestScore),
+                        style: GoogleFonts.manrope(
+                          color: colors.text1,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    'Best ${app.save.bestScore}',
-                    style: GoogleFonts.manrope(
-                      color: colors.text1,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  const SizedBox(height: 6),
+                  _PowerBadgeRow(game: _game),
                 ],
               ),
             ),
@@ -141,18 +199,45 @@ class _GameScreenState extends State<GameScreen> {
   }
 }
 
-class _GameColors {
-  const _GameColors({
-    required this.bg,
-    required this.lane,
-    required this.obstacle,
-    required this.accent,
-  });
+class _PowerBadgeRow extends StatelessWidget {
+  const _PowerBadgeRow({required this.game});
 
-  final Color bg;
-  final Color lane;
-  final Color obstacle;
-  final Color accent;
+  final OneGame game;
+
+  @override
+  Widget build(BuildContext context) {
+    final badges = <Widget>[
+      if (game.shieldActive) const _PowerBadge('🛡️', Color(0xFF34D399)),
+      if (game.magnetTimer > 0) const _PowerBadge('🧲', Color(0xFF60A5FA)),
+      if (game.slowmoTimer > 0) const _PowerBadge('🐌', Color(0xFF818CF8)),
+      if (game.multiplierTimer > 0) const _PowerBadge('✖2', Color(0xFFF472B6)),
+    ];
+    if (badges.isEmpty) return const SizedBox.shrink();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [for (final b in badges) Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: b)],
+    );
+  }
+}
+
+class _PowerBadge extends StatelessWidget {
+  const _PowerBadge(this.emoji, this.color);
+
+  final String emoji;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: color.withValues(alpha: 0.6)),
+      ),
+      child: Text(emoji, style: const TextStyle(fontSize: 13)),
+    );
+  }
 }
 
 class _TutorialOverlay extends StatelessWidget {
@@ -163,6 +248,7 @@ class _TutorialOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
     return Positioned.fill(
       child: GestureDetector(
         onTap: onDone,
@@ -174,7 +260,7 @@ class _TutorialOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Tap to change lane',
+                t.tutorialTitle,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
                   fontSize: 28,
@@ -184,12 +270,12 @@ class _TutorialOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Avoid blocks. One more try.',
+                t.tutorialSubtitle,
                 style: GoogleFonts.manrope(color: colors.text1),
               ),
               const SizedBox(height: 18),
               Text(
-                'Tap anywhere to start',
+                t.tutorialCta,
                 style: GoogleFonts.manrope(
                   color: colors.accent,
                   fontWeight: FontWeight.w600,

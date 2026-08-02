@@ -21,19 +21,49 @@ class LaneMask {
   }
 }
 
+/// Tipo de pelotita coleccionable en pista.
+enum PickupType { score, coin, magnet, shield, slowmo, multiplier }
+
+extension PickupTypeIsPower on PickupType {
+  bool get isPower => this != PickupType.score && this != PickupType.coin;
+}
+
+/// Forma de una racha de monedas consecutivas a lo largo de varios segmentos
+/// (largo variable). Todas menos [twinLines] ponen una moneda por fila;
+/// [twinLines] pone dos (izquierda + derecha, con el centro libre).
+enum CoinPattern {
+  straightLeft,
+  straightCenter,
+  straightRight,
+  zigzagWide,
+  zigzagLeft,
+  zigzagRight,
+  wave,
+  staircaseRight,
+  staircaseLeft,
+  twinLines,
+}
+
 class Segment {
   const Segment({
     required this.obstacleMask,
-    this.hasOrb = false,
-    this.orbLane = 1,
+    this.pickupType,
+    this.pickupLane = 1,
+    this.coinLanes = const [],
     this.isBreath = false,
   });
 
   /// Bits de carriles bloqueados. 0 = sin obstáculo.
   final int obstacleMask;
-  final bool hasOrb;
-  final int orbLane;
+  final PickupType? pickupType;
+  final int pickupLane;
+
+  /// Monedas simultáneas en esta fila (carriles libres), usado por las
+  /// rachas de moneda para formar clusters. Independiente de [pickupType].
+  final List<int> coinLanes;
   final bool isBreath;
 
   bool get hasObstacle => obstacleMask != 0;
+  bool get hasPickup => pickupType != null;
+  bool get hasCoinLanes => coinLanes.isNotEmpty;
 }

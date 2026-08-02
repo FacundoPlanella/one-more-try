@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../l10n/generated/app_localizations.dart';
 import 'home_screen.dart';
 
 /// Startup attribution for third-party art, then continues to Home.
@@ -36,9 +37,16 @@ class _CreditsScreenState extends State<CreditsScreen> {
     );
   }
 
-  Future<void> _openPack() async {
+  Future<void> _openShadePack() async {
     await launchUrl(
       Uri.parse('https://merchant-shade.itch.io/ph-myth-creatures'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  Future<void> _openSuperRetroPack() async {
+    await launchUrl(
+      Uri.parse('https://gif-superretroworld.itch.io/'),
       mode: LaunchMode.externalApplication,
     );
   }
@@ -46,14 +54,14 @@ class _CreditsScreenState extends State<CreditsScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
     final body = SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 28),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
         child: Column(
           children: [
-            const Spacer(flex: 2),
             Text(
-              'Credits',
+              t.creditsHeading,
               style: GoogleFonts.outfit(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
@@ -68,53 +76,28 @@ class _CreditsScreenState extends State<CreditsScreen> {
               filterQuality: FilterQuality.none,
             ),
             const SizedBox(height: 20),
-            Text(
-              'Pixel art',
-              style: GoogleFonts.manrope(
-                color: colors.text1,
-                fontSize: 13,
-                letterSpacing: 1.2,
-              ),
+            _CreditBlock(
+              colors: colors,
+              label: t.pixelArtLabel,
+              title: t.philippineMythCreatures,
+              author: t.byShade,
+              note: t.cc0Note,
+              linkLabel: t.viewOnItch,
+              onViewPack: _openShadePack,
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Philippine Myth Creatures',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: colors.text0,
-              ),
+            const SizedBox(height: 32),
+            _CreditBlock(
+              colors: colors,
+              label: t.uiArtLabel,
+              title: t.superRetroWorldPack,
+              author: t.bySuperRetroAuthors,
+              note: t.superRetroLicenseNote,
+              linkLabel: t.viewOnItch,
+              onViewPack: _openSuperRetroPack,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 40),
             Text(
-              'by Shade',
-              style: GoogleFonts.manrope(
-                fontSize: 16,
-                color: colors.accent,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'CC0 · itch.io pack used with thanks',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                color: colors.text1,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: _openPack,
-              child: Text(
-                'View on itch.io',
-                style: GoogleFonts.manrope(color: colors.accent),
-              ),
-            ),
-            const Spacer(flex: 2),
-            Text(
-              'One more try. — Planella',
+              t.gameByPlanella,
               style: GoogleFonts.manrope(
                 fontSize: 13,
                 color: colors.text1,
@@ -124,17 +107,16 @@ class _CreditsScreenState extends State<CreditsScreen> {
             if (widget.fromSettings)
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Back'),
+                child: Text(t.back),
               )
             else
               Text(
-                'Loading…',
+                t.loading,
                 style: GoogleFonts.manrope(
                   fontSize: 12,
                   color: colors.text1.withValues(alpha: 0.7),
                 ),
               ),
-            const Spacer(),
           ],
         ),
       ),
@@ -143,6 +125,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
     return Scaffold(
       body: Container(
         width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -155,6 +138,81 @@ class _CreditsScreenState extends State<CreditsScreen> {
         ),
         child: body,
       ),
+    );
+  }
+}
+
+/// Un bloque de atribución (label + nombre del pack + autor + nota de
+/// licencia + link) — usado una vez por cada pack de terceros que el juego
+/// usa, para no repetir el layout.
+class _CreditBlock extends StatelessWidget {
+  const _CreditBlock({
+    required this.colors,
+    required this.label,
+    required this.title,
+    required this.author,
+    required this.note,
+    required this.linkLabel,
+    required this.onViewPack,
+  });
+
+  final OneThemeExtension colors;
+  final String label;
+  final String title;
+  final String author;
+  final String note;
+  final String linkLabel;
+  final VoidCallback onViewPack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.manrope(
+            color: colors.text1,
+            fontSize: 13,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.outfit(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: colors.text0,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          author,
+          style: GoogleFonts.manrope(
+            fontSize: 16,
+            color: colors.accent,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          note,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            color: colors.text1,
+          ),
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: onViewPack,
+          child: Text(
+            linkLabel,
+            style: GoogleFonts.manrope(color: colors.accent),
+          ),
+        ),
+      ],
     );
   }
 }

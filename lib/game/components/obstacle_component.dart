@@ -1,10 +1,12 @@
 import 'dart:ui';
 
 import 'package:flame/components.dart';
+import 'package:flame/flame.dart';
 
 import '../../core/constants/game_constants.dart';
 import '../../generation/segment.dart';
 
+/// Obstáculos genéricos: bloques redondeados (sin sprites).
 class ObstacleRowComponent extends PositionComponent {
   ObstacleRowComponent({
     required this.mask,
@@ -12,84 +14,37 @@ class ObstacleRowComponent extends PositionComponent {
     required this.originX,
     required this.rowHeight,
     required this.color,
-    this.treeSprites = const [],
   });
 
   final int mask;
   final double laneWidth;
   final double originX;
   final double rowHeight;
-  final Color color;
-  final List<Sprite> treeSprites;
+  Color color;
 
   bool get isOffscreen => position.y - rowHeight > 2000;
 
-  Sprite? _spriteForLane(int lane) {
-    if (treeSprites.isEmpty) return null;
-    final idx = (mask * 17 + lane * 13).abs() % treeSprites.length;
-    return treeSprites[idx];
-  }
-
   @override
   void render(Canvas canvas) {
+    final fill = Paint()..color = color;
+    final edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = Color.lerp(color, const Color(0xFFFFFFFF), 0.12)!
+          .withValues(alpha: 0.35);
+
+    final h = rowHeight * 0.52;
     for (var lane = 0; lane < GameConstants.laneCount; lane++) {
       if (!LaneMask.isBlocked(mask, lane)) continue;
-      final cx = originX + lane * laneWidth + laneWidth * 0.5 - position.x;
-      final sprite = _spriteForLane(lane);
-      if (sprite != null) {
-        _drawTreeSprite(canvas, cx, sprite);
-      } else {
-        _drawFallbackTree(canvas, cx, lane);
-      }
+      final x = originX + lane * laneWidth + laneWidth * 0.14 - position.x;
+      final w = laneWidth * 0.72;
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(x, -h / 2, w, h),
+        const Radius.circular(12),
+      );
+      canvas.drawRRect(rect, fill);
+      canvas.drawRRect(rect, edge);
     }
-  }
-
-  void _drawTreeSprite(Canvas canvas, double cx, Sprite sprite) {
-    final maxW = laneWidth * 0.86;
-    final maxH = rowHeight * 1.85;
-    final src = sprite.srcSize;
-    final scale = (maxW / src.x < maxH / src.y) ? maxW / src.x : maxH / src.y;
-    final dw = src.x * scale;
-    final dh = src.y * scale;
-    // Anchor near the base so the trunk sits on the collision band.
-    sprite.render(
-      canvas,
-      position: Vector2(cx - dw / 2, -dh * 0.72),
-      size: Vector2(dw, dh),
-      overridePaint: Paint()..filterQuality = FilterQuality.medium,
-    );
-  }
-
-  void _drawFallbackTree(Canvas canvas, double cx, int lane) {
-    final scale = 0.9 + ((mask + lane) % 3) * 0.08;
-    final trunkW = laneWidth * 0.12 * scale;
-    final trunkH = rowHeight * 0.42 * scale;
-    final canopyR = laneWidth * 0.28 * scale;
-
-    final trunk = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(cx, trunkH * 0.15),
-        width: trunkW,
-        height: trunkH,
-      ),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(trunk, Paint()..color = const Color(0xFF3B2A1A));
-
-    final canopyPaint = Paint()..color = const Color(0xFF163528);
-    final canopyDark = Paint()..color = const Color(0xFF0E2418);
-    final top = Offset(cx, -canopyR * 0.55);
-    canvas.drawCircle(
-      top.translate(-canopyR * 0.35, canopyR * 0.2),
-      canopyR * 0.85,
-      canopyDark,
-    );
-    canvas.drawCircle(
-      top.translate(canopyR * 0.35, canopyR * 0.25),
-      canopyR * 0.8,
-      canopyDark,
-    );
-    canvas.drawCircle(top, canopyR, canopyPaint);
   }
 
   /// Colisión por carril con perdón horizontal.
@@ -100,40 +55,80 @@ class ObstacleRowComponent extends PositionComponent {
   }) {
     if (!LaneMask.isBlocked(mask, playerLane)) return false;
     final dy = (position.y - playerY).abs();
-    final half = rowHeight * 0.55 / 2;
+    final half = rowHeight * 0.52 / 2;
     return dy < half + playerRadius * (1 - GameConstants.hitboxForgiveness);
   }
 }
 
 class OrbComponent extends PositionComponent {
   OrbComponent({
+    required this.type,
     required this.lane,
     required this.laneWidth,
     required this.originX,
     required this.color,
   });
 
+  final PickupType type;
   final int lane;
   final double laneWidth;
   final double originX;
   final Color color;
   bool collected = false;
 
+  /// true mientras el imán la está atrayendo hacia el jugador (animación de
+  /// atracción real, no solo un radio de recolección más grande).
+  bool attracting = false;
+  Sprite? _icon;
+
   void layoutY(double y) {
     position = Vector2(originX + (lane + 0.5) * laneWidth, y);
   }
 
+  @override
+  Future<void> onLoad() async {
+    final path = _iconAssetFor(type);
+    if (path == null) return;
+    try {
+      final image = await Flame.images.load(path);
+      _icon = Sprite(image);
+    } catch (_) {
+      _icon = null;
+    }
+  }
+
+  /// Ícono real (assets/images/ui/) para los tipos con arte propio; el resto
+  /// sigue usando el glyph vectorial de [_renderGlyph].
+  static String? _iconAssetFor(PickupType type) {
+    switch (type) {
+      case PickupType.coin:
+        return 'ui/coin.png';
+      case PickupType.shield:
+        return 'ui/shield.png';
+      case PickupType.score:
+      case PickupType.magnet:
+      case PickupType.slowmo:
+      case PickupType.multiplier:
+        return null;
+    }
+  }
+
+  /// [ignoreLane] se usa mientras el imán ya la está arrastrando hacia el
+  /// jugador (ver [attracting]): en ese caso alcanza con la cercanía real,
+  /// sin importar en qué carril arrancó.
   bool tryCollect({
     required int playerLane,
     required double playerX,
     required double playerY,
     required double playerRadius,
+    bool ignoreLane = false,
   }) {
     if (collected) return false;
-    if (playerLane != lane) return false;
+    if (!ignoreLane && playerLane != lane) return false;
+    final reach = playerRadius + 10;
     final dx = position.x - playerX;
     final dy = position.y - playerY;
-    if (dx * dx + dy * dy <= (playerRadius + 10) * (playerRadius + 10)) {
+    if (dx * dx + dy * dy <= reach * reach) {
       collected = true;
       return true;
     }
@@ -143,6 +138,24 @@ class OrbComponent extends PositionComponent {
   @override
   void render(Canvas canvas) {
     if (collected) return;
+
+    final icon = _icon;
+    if (icon != null) {
+      canvas.drawCircle(
+        Offset.zero,
+        12,
+        Paint()..color = color.withValues(alpha: 0.22),
+      );
+      icon.render(
+        canvas,
+        position: Vector2.zero(),
+        size: Vector2.all(18),
+        anchor: Anchor.center,
+        overridePaint: Paint()..filterQuality = FilterQuality.none,
+      );
+      return;
+    }
+
     canvas.drawCircle(
       Offset.zero,
       10,
@@ -161,5 +174,40 @@ class OrbComponent extends PositionComponent {
         ..strokeWidth = 1.5
         ..color = color.withValues(alpha: 0.4),
     );
+    _renderGlyph(canvas);
+  }
+
+  /// Ícono simple por tipo, sin depender de sprites externos.
+  void _renderGlyph(Canvas canvas) {
+    final glyphPaint = Paint()..color = const Color(0xE6101012);
+    switch (type) {
+      case PickupType.score:
+        return;
+      case PickupType.coin:
+        canvas.drawCircle(Offset.zero, 3.2, glyphPaint);
+      case PickupType.magnet:
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset.zero, width: 3, height: 7),
+          glyphPaint,
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: const Offset(-2.5, 3), width: 8, height: 3),
+          glyphPaint,
+        );
+      case PickupType.shield:
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(center: Offset.zero, width: 8, height: 9),
+            const Radius.circular(3),
+          ),
+          glyphPaint,
+        );
+      case PickupType.slowmo:
+        canvas.drawLine(Offset.zero, const Offset(0, -4), glyphPaint..strokeWidth = 1.6);
+        canvas.drawLine(Offset.zero, const Offset(3, 1), glyphPaint..strokeWidth = 1.6);
+      case PickupType.multiplier:
+        canvas.drawLine(const Offset(-3, -3), const Offset(3, 3), glyphPaint..strokeWidth = 1.8);
+        canvas.drawLine(const Offset(-3, 3), const Offset(3, -3), glyphPaint..strokeWidth = 1.8);
+    }
   }
 }

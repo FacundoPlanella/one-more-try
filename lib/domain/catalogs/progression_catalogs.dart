@@ -64,6 +64,16 @@ class MedalCatalog {
       name: 'Purist',
       description: 'Score ≥ 150 without orbs',
     ),
+    MedalDef(
+      id: 'coins_100',
+      name: 'Coin pouch',
+      description: 'Earn 10,000 coins total',
+    ),
+    MedalDef(
+      id: 'coins_500',
+      name: 'Treasury',
+      description: 'Earn 50,000 coins total',
+    ),
   ];
 }
 

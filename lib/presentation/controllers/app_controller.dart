@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 
 import '../../data/save_data.dart';
 import '../../data/save_repository.dart';
+import '../../domain/catalogs/perk_catalog.dart';
+import '../../domain/catalogs/skin_catalog.dart';
 import '../../domain/progression/progression_service.dart';
 import '../../services/audio_service.dart';
 import '../../services/haptics_service.dart';
@@ -48,6 +50,33 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Compra una skin exclusiva de Tienda con monedas. Devuelve false si no
+  /// alcanza el saldo o ya está comprada.
+  Future<bool> purchaseSkin(String id) async {
+    if (save.unlockedSkins.contains(id)) return false;
+    final skin = SkinCatalog.byId(id);
+    if (!skin.isShopExclusive) return false;
+    if (save.coins < skin.priceCoins!) return false;
+    save.coins -= skin.priceCoins!;
+    save.unlockedSkins.add(id);
+    await persist();
+    notifyListeners();
+    return true;
+  }
+
+  /// Compra un perk permanente con monedas. Devuelve false si no alcanza el
+  /// saldo o ya está comprado.
+  Future<bool> purchasePerk(String id) async {
+    if (save.purchasedPerks.contains(id)) return false;
+    final perk = PerkCatalog.byId(id);
+    if (save.coins < perk.priceCoins) return false;
+    save.coins -= perk.priceCoins;
+    save.purchasedPerks.add(id);
+    await persist();
+    notifyListeners();
+    return true;
+  }
+
   Future<void> setMusic(bool value) async {
     save.music = value;
     await audio.applySettings(music: save.music, sfx: save.sfx);
@@ -64,6 +93,12 @@ class AppController extends ChangeNotifier {
 
   Future<void> setThemeMode(String mode) async {
     save.themeMode = mode;
+    await persist();
+    notifyListeners();
+  }
+
+  Future<void> setLanguageCode(String code) async {
+    save.languageCode = code;
     await persist();
     notifyListeners();
   }

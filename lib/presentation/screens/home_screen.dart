@@ -4,11 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../domain/progression/progression_service.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
+import '../widgets/catalog_labels.dart';
 import '../widgets/common_widgets.dart';
 import 'game_screen.dart';
 import 'medals_screen.dart';
 import 'settings_screen.dart';
+import 'shop_screen.dart';
 import 'skins_screen.dart';
 import 'stats_screen.dart';
 
@@ -21,6 +24,7 @@ class HomeScreen extends StatelessWidget {
     final colors = context.oneColors;
     final save = app.save;
     final mission = ProgressionService.currentMission(save);
+    final t = AppLocalizations.of(context);
 
     return BannerScaffold(
       child: SafeArea(
@@ -29,22 +33,33 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SettingsScreen(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  CoinLabel(
+                    amount: save.coins,
+                    iconSize: 18,
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: colors.text0,
                     ),
                   ),
-                  icon: Icon(Icons.tune_rounded, color: colors.text1),
-                ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SettingsScreen(),
+                      ),
+                    ),
+                    icon: Icon(Icons.tune_rounded, color: colors.text1),
+                  ),
+                ],
               ),
               const Spacer(flex: 2),
               const BrandTitle(),
               const SizedBox(height: 10),
               Text(
-                'Best  ${save.bestScore}',
+                t.bestScoreLabel(save.bestScore),
                 style: GoogleFonts.manrope(
                   fontSize: 18,
                   color: colors.text1,
@@ -53,7 +68,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                TitleLabel.resolve(save.titleId),
+                TitleLabel.resolve(context, save.titleId),
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   color: colors.accent,
@@ -62,7 +77,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const Spacer(flex: 2),
               PrimaryButton(
-                label: 'Play',
+                label: t.play,
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
@@ -76,7 +91,7 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SubtleLink(
-                    label: 'Skins',
+                    label: t.linkSkins,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const SkinsScreen(),
@@ -84,7 +99,15 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   SubtleLink(
-                    label: 'Stats',
+                    label: t.linkShop,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const ShopScreen(),
+                      ),
+                    ),
+                  ),
+                  SubtleLink(
+                    label: t.linkStats,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const StatsScreen(),
@@ -92,7 +115,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                   SubtleLink(
-                    label: 'Medals',
+                    label: t.linkMedals,
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const MedalsScreen(),
@@ -103,7 +126,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const Spacer(),
               _DailyRow(
-                title: mission.title,
+                title: MissionLabels.title(context, mission.id),
                 progress: save.dailyProgress,
                 target: mission.target,
                 done: save.dailyCompleted,
@@ -114,29 +137,6 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class TitleLabel {
-  static String resolve(String id) {
-    switch (id) {
-      case 'aprendiz':
-        return 'Apprentice';
-      case 'constante':
-        return 'Steady';
-      case 'cazador':
-        return 'Record hunter';
-      case 'minimalista':
-        return 'Minimalist';
-      case 'uno_mas':
-        return 'One more';
-      case 'equilibrio':
-        return 'Balance';
-      case 'one_more_try':
-        return 'One more try.';
-      default:
-        return 'Novice';
-    }
   }
 }
 
@@ -156,12 +156,13 @@ class _DailyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
     final p = (progress / target).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          done ? 'Daily complete' : 'Daily: $title',
+          done ? t.dailyComplete : t.dailyLabel(title),
           style: GoogleFonts.manrope(
             color: colors.text1,
             fontSize: 13,
