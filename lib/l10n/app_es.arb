@@ -23,6 +23,13 @@
   "tutorialTitle": "Tocá para cambiar de carril",
   "tutorialSubtitle": "Esquivá los bloques. One more try.",
   "tutorialCta": "Tocá en cualquier lado para empezar",
+  "tutorialSkip": "Omitir",
+  "tutorialHint": "Tocá en cualquier lado para cambiar de carril",
+  "howToPlay": "Cómo jugar",
+  "howToPlaySubtitle": "Repasá lo básico cuando quieras",
+  "rateApp": "Calificar la app",
+  "rateAppSubtitle": "¿Te está gustando? Dejá tu reseña",
+  "gotIt": "Entendido",
 
   "newBest": "NUEVO RÉCORD",
   "dailyMissionComplete": "Misión diaria completa",

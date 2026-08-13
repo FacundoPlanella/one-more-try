@@ -222,6 +222,48 @@ abstract class AppLocalizations {
   /// **'Tap anywhere to start'**
   String get tutorialCta;
 
+  /// No description provided for @tutorialSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get tutorialSkip;
+
+  /// No description provided for @tutorialHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap anywhere to switch lanes'**
+  String get tutorialHint;
+
+  /// No description provided for @howToPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'How to play'**
+  String get howToPlay;
+
+  /// No description provided for @howToPlaySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the basics anytime'**
+  String get howToPlaySubtitle;
+
+  /// No description provided for @rateApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate this app'**
+  String get rateApp;
+
+  /// No description provided for @rateAppSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enjoying the game? Leave a review'**
+  String get rateAppSubtitle;
+
+  /// No description provided for @gotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
+
   /// No description provided for @newBest.
   ///
   /// In en, this message translates to:

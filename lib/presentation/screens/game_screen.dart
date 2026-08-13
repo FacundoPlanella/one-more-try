@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/catalogs/perk_catalog.dart';
 import '../../domain/progression/progression_service.dart';
@@ -13,6 +14,12 @@ import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
 import 'result_screen.dart';
+
+/// Etapas del onboarding: [intro] es la tarjeta bloqueante inicial,
+/// [guided] deja jugar mostrando una pista persistente durante los primeros
+/// obstáculos (ver GameConstants.tutorialGuidedObstacles), [none] es el
+/// estado normal de partida.
+enum _TutorialStage { none, intro, guided }
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -26,6 +33,7 @@ class _GameScreenState extends State<GameScreen> {
   int _coins = 0;
   bool _ended = false;
   late OneGame _game;
+  late _TutorialStage _tutorialStage;
   Timer? _hudTimer;
 
   @override
@@ -101,12 +109,21 @@ class _GameScreenState extends State<GameScreen> {
         });
       },
     );
-    if (!app.save.tutorialDone) {
+    _tutorialStage =
+        app.save.tutorialDone ? _TutorialStage.none : _TutorialStage.intro;
+    if (_tutorialStage == _TutorialStage.intro) {
       _game.paused = true;
     }
-    // Refresca los indicadores de poder activo (no tienen su propio callback).
+    // Refresca los indicadores de poder activo (no tienen su propio callback)
+    // y, durante el tutorial guiado, chequea si ya se esquivaron suficientes
+    // obstáculos para darlo por terminado.
     _hudTimer = Timer.periodic(const Duration(milliseconds: 150), (_) {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      if (_tutorialStage == _TutorialStage.guided &&
+          _game.obstaclesCleared >= GameConstants.tutorialGuidedObstacles) {
+        _finishTutorial();
+      }
+      setState(() {});
     });
   }
 
@@ -114,6 +131,22 @@ class _GameScreenState extends State<GameScreen> {
   void dispose() {
     _hudTimer?.cancel();
     super.dispose();
+  }
+
+  void _startGuidedTutorial() {
+    setState(() => _tutorialStage = _TutorialStage.guided);
+    _game.paused = false;
+  }
+
+  void _skipTutorial() {
+    _game.paused = false;
+    _finishTutorial();
+  }
+
+  void _finishTutorial() {
+    if (_tutorialStage == _TutorialStage.none) return;
+    setState(() => _tutorialStage = _TutorialStage.none);
+    context.read<AppController>().completeTutorial();
   }
 
   @override
@@ -186,12 +219,12 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-          if (!app.save.tutorialDone)
-            _TutorialOverlay(
-              onDone: () {
-                app.completeTutorial();
-                _game.paused = false;
-              },
+          if (_tutorialStage == _TutorialStage.guided)
+            const _TutorialHintBanner(),
+          if (_tutorialStage == _TutorialStage.intro)
+            _TutorialIntroCard(
+              onStart: _startGuidedTutorial,
+              onSkip: _skipTutorial,
             ),
         ],
       ),
@@ -240,10 +273,11 @@ class _PowerBadge extends StatelessWidget {
   }
 }
 
-class _TutorialOverlay extends StatelessWidget {
-  const _TutorialOverlay({required this.onDone});
+class _TutorialIntroCard extends StatelessWidget {
+  const _TutorialIntroCard({required this.onStart, required this.onSkip});
 
-  final VoidCallback onDone;
+  final VoidCallback onStart;
+  final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +285,7 @@ class _TutorialOverlay extends StatelessWidget {
     final t = AppLocalizations.of(context);
     return Positioned.fill(
       child: GestureDetector(
-        onTap: onDone,
+        onTap: onStart,
         child: Container(
           color: Colors.black45,
           alignment: Alignment.center,
@@ -281,7 +315,55 @@ class _TutorialOverlay extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: onSkip,
+                child: Text(
+                  t.tutorialSkip,
+                  style: GoogleFonts.manrope(
+                    color: colors.text1,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pista no bloqueante que queda visible durante los primeros obstáculos
+/// del tutorial guiado: el jugador ya está jugando, solo se refuerza el
+/// gesto con feedback hands-on en vez de otro texto estático.
+class _TutorialHintBanner extends StatelessWidget {
+  const _TutorialHintBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
+    return Positioned(
+      top: 88,
+      left: 24,
+      right: 24,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: colors.bg1.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(color: colors.accent.withValues(alpha: 0.4)),
+          ),
+          child: Text(
+            t.tutorialHint,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.manrope(
+              color: colors.text0,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
           ),
         ),
       ),

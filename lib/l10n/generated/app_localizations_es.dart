@@ -73,6 +73,27 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tutorialCta => 'Tocá en cualquier lado para empezar';
 
   @override
+  String get tutorialSkip => 'Omitir';
+
+  @override
+  String get tutorialHint => 'Tocá en cualquier lado para cambiar de carril';
+
+  @override
+  String get howToPlay => 'Cómo jugar';
+
+  @override
+  String get howToPlaySubtitle => 'Repasá lo básico cuando quieras';
+
+  @override
+  String get rateApp => 'Calificar la app';
+
+  @override
+  String get rateAppSubtitle => '¿Te está gustando? Dejá tu reseña';
+
+  @override
+  String get gotIt => 'Entendido';
+
+  @override
   String get newBest => 'NUEVO RÉCORD';
 
   @override

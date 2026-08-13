@@ -73,6 +73,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialCta => 'Tap anywhere to start';
 
   @override
+  String get tutorialSkip => 'Skip';
+
+  @override
+  String get tutorialHint => 'Tap anywhere to switch lanes';
+
+  @override
+  String get howToPlay => 'How to play';
+
+  @override
+  String get howToPlaySubtitle => 'Review the basics anytime';
+
+  @override
+  String get rateApp => 'Rate this app';
+
+  @override
+  String get rateAppSubtitle => 'Enjoying the game? Leave a review';
+
+  @override
+  String get gotIt => 'Got it';
+
+  @override
   String get newBest => 'NEW BEST';
 
   @override

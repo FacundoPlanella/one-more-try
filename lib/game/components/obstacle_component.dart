@@ -14,11 +14,11 @@ class ObstacleRowComponent extends PositionComponent {
     required this.originX,
     required this.rowHeight,
     required this.color,
-  });
+  }) : super(priority: 0);
 
   final int mask;
-  final double laneWidth;
-  final double originX;
+  double laneWidth;
+  double originX;
   final double rowHeight;
   Color color;
 
@@ -67,22 +67,37 @@ class OrbComponent extends PositionComponent {
     required this.laneWidth,
     required this.originX,
     required this.color,
-  });
+  }) : super(priority: 1);
 
   final PickupType type;
   final int lane;
-  final double laneWidth;
-  final double originX;
+  double laneWidth;
+  double originX;
   final Color color;
   bool collected = false;
 
   /// true mientras el imán la está atrayendo hacia el jugador (animación de
   /// atracción real, no solo un radio de recolección más grande).
   bool attracting = false;
+
+  /// Punto de llegada propio, levemente distinto al centro exacto del
+  /// jugador: si varias monedas atraen a la vez y todas apuntan al mismo
+  /// píxel, se ven "apiladas" una arriba de otra en vez de llegar cada una
+  /// por su lado. Se asigna una sola vez, al empezar a atraer.
+  Vector2 attractOffset = Vector2.zero();
+
   Sprite? _icon;
 
   void layoutY(double y) {
     position = Vector2(originX + (lane + 0.5) * laneWidth, y);
+  }
+
+  /// Recalcula solo la X (según el nuevo ancho de carril), preservando la Y
+  /// —que representa el progreso de scroll, no la posición horizontal—.
+  void updateLaneWidth(double newLaneWidth, double newOriginX) {
+    laneWidth = newLaneWidth;
+    originX = newOriginX;
+    position.x = originX + (lane + 0.5) * laneWidth;
   }
 
   @override

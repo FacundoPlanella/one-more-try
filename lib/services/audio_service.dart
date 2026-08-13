@@ -53,8 +53,19 @@ class AudioService {
   Future<void> playDie() => _playSfx('audio/sfx/die.wav');
   Future<void> playBest() => _playSfx('audio/sfx/best.wav');
 
+  final Map<String, DateTime> _lastPlayed = {};
+  // Sin esto, una racha de monedas (imán, o varias muy juntas) dispara un
+  // play() de plataforma por cada una en el mismo puñado de frames, y eso
+  // se siente como una traba — igual no se distinguen sonidos más
+  // seguidos que esto.
+  static const _sfxCooldown = Duration(milliseconds: 45);
+
   Future<void> _playSfx(String path) async {
     if (!sfxEnabled || !_assetsReady) return;
+    final now = DateTime.now();
+    final last = _lastPlayed[path];
+    if (last != null && now.difference(last) < _sfxCooldown) return;
+    _lastPlayed[path] = now;
     try {
       await _sfx.play(AssetSource(path));
     } catch (_) {}

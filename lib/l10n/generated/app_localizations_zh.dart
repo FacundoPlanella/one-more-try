@@ -73,6 +73,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tutorialCta => '点击任意位置开始';
 
   @override
+  String get tutorialSkip => '跳过';
+
+  @override
+  String get tutorialHint => '点击任意位置切换车道';
+
+  @override
+  String get howToPlay => '玩法说明';
+
+  @override
+  String get howToPlaySubtitle => '随时回顾基本玩法';
+
+  @override
+  String get rateApp => '给应用评分';
+
+  @override
+  String get rateAppSubtitle => '喜欢这个游戏吗？给我们留个评价吧';
+
+  @override
+  String get gotIt => '知道了';
+
+  @override
   String get newBest => '新纪录';
 
   @override

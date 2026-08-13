@@ -23,6 +23,13 @@
   "tutorialTitle": "点击切换车道",
   "tutorialSubtitle": "躲避障碍。再试一次。",
   "tutorialCta": "点击任意位置开始",
+  "tutorialSkip": "跳过",
+  "tutorialHint": "点击任意位置切换车道",
+  "howToPlay": "玩法说明",
+  "howToPlaySubtitle": "随时回顾基本玩法",
+  "rateApp": "给应用评分",
+  "rateAppSubtitle": "喜欢这个游戏吗？给我们留个评价吧",
+  "gotIt": "知道了",
 
   "newBest": "新纪录",
   "dailyMissionComplete": "每日任务完成",

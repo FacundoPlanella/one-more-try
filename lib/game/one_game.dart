@@ -60,12 +60,16 @@ class OneGame extends FlameGame with TapCallbacks {
   int coins = 0;
   int orbCombo = 0;
   bool collectedAnyOrb = false;
+  /// Filas de obstáculo esquivadas con éxito (salieron de pantalla sin
+  /// matar al jugador). Usado por el tutorial guiado del onboarding.
+  int obstaclesCleared = 0;
 
   bool _shieldActive = false;
   double _magnetTimer = 0;
   double _slowmoTimer = 0;
   double _multiplierTimer = 0;
   double _shieldFlashTimer = 0;
+  final Random _fxRng = Random();
 
   bool get shieldActive => _shieldActive;
   double get magnetTimer => _magnetTimer;
@@ -128,17 +132,36 @@ class OneGame extends FlameGame with TapCallbacks {
       originX: _originX,
       y: size.y * GameConstants.playerYFactor,
     );
-    // Mismo criterio de espaciado que usa update() más adelante: si no, una
-    // racha de monedas que arranca dentro de este burst inicial (muy común,
-    // el primer intervalo posible es a los 2 segmentos) queda con el
-    // espaciado fijo de abajo sin importar si es una fila de racha, y dos
-    // monedas del mismo patrón terminan pegadas.
+    _warmupSpawns();
+  }
+
+  /// Llena las primeras filas "adelantando" el mismo mecanismo de timer que
+  /// usa [update] (ver más abajo), en vez de calcular posiciones con una
+  /// fórmula aparte. Con dos fórmulas separadas, una fila del burst inicial
+  /// y la primera fila generada en vivo podían coincidir en el mismo punto
+  /// de la pantalla en el mismo instante — al reusar el timer real no hay
+  /// dos relojes que se puedan desincronizar entre sí.
+  void _warmupSpawns() {
+    const warmupSeconds = 3.5;
+    const warmupDt = 1 / 60.0;
     final d0 = curve.difficultyForScore(score);
-    final normalSpacing = curve.scrollSpeed(d0) * curve.gapSeconds(d0);
-    var y = -_rowHeight;
-    for (var i = 0; i < 5; i++) {
-      _lastSpawnWasCoinTrail = _spawnSegment(initialY: y);
-      y -= _lastSpawnWasCoinTrail ? _coinTrailRowSpacing : normalSpacing;
+    final speed0 = curve.scrollSpeed(d0);
+    final gap0 = curve.gapSeconds(d0);
+
+    var timer = 0.0;
+    var elapsed = 0.0;
+    while (elapsed < warmupSeconds) {
+      timer += warmupDt;
+      final spawnGap =
+          _lastSpawnWasCoinTrail ? _coinTrailRowSpacing / speed0 : gap0;
+      if (timer >= spawnGap) {
+        timer = 0;
+        // Cuánto ya "recorrió" esta fila entre que se generó (hace
+        // warmupSeconds - elapsed) y el instante en que arranca la partida.
+        final y = -_rowHeight + speed0 * (warmupSeconds - elapsed);
+        _lastSpawnWasCoinTrail = _spawnSegment(initialY: y);
+      }
+      elapsed += warmupDt;
     }
   }
 
@@ -151,6 +174,23 @@ class OneGame extends FlameGame with TapCallbacks {
       originX: _originX,
       y: size.y * GameConstants.playerYFactor,
     );
+    // El motor a veces reporta un tamaño inicial que se corrige un instante
+    // después de onLoad(): sin esto, las filas ya generadas quedan ancladas
+    // al ancho de carril viejo mientras el jugador salta al nuevo, y
+    // obstáculos/monedas terminan visualmente desalineados de la grilla.
+    for (final o in _obstacles) {
+      o.laneWidth = _laneWidth;
+      o.originX = _originX;
+    }
+    for (final o in _orbs) {
+      // Una moneda que el imán ya está atrayendo dejó su carril a propósito
+      // para ir hacia el jugador — reposicionarla acá la manda de vuelta a
+      // su carril original y arranca un loop de ida y vuelta con cada
+      // resize. Solo reubicamos las que siguen ancladas a su carril.
+      if (!o.attracting) {
+        o.updateLaneWidth(_laneWidth, _originX);
+      }
+    }
   }
 
   @override
@@ -223,6 +263,12 @@ class OneGame extends FlameGame with TapCallbacks {
 
   @override
   void update(double dt) {
+    // Si el frame anterior tardó de más (jank, un frame perdido, volver de
+    // background), dt puede llegar mucho más grande de lo normal — y como
+    // el imán mueve la moneda a una velocidad fija por segundo, un dt
+    // grande se traduce en un salto/teletransporte visible en un solo
+    // frame. Con el clamp, como mucho se simula a ~20 fps por frame.
+    dt = dt.clamp(0.0, 1 / 20);
     super.update(dt);
     _pulse += dt;
 
@@ -274,10 +320,15 @@ class OneGame extends FlameGame with TapCallbacks {
         final dy = (orb.position.y - player.position.y).abs();
         if (dy <= magnetReach) {
           orb.attracting = true;
+          orb.attractOffset = Vector2(
+            (_fxRng.nextDouble() - 0.5) * 26,
+            (_fxRng.nextDouble() - 0.5) * 26,
+          );
         }
       }
       if (orb.attracting) {
-        final toPlayer = player.position - orb.position;
+        final target = player.position + orb.attractOffset;
+        final toPlayer = target - orb.position;
         final dist = toPlayer.length;
         if (dist > 1) {
           orb.position += toPlayer.normalized() *
@@ -359,6 +410,7 @@ class OneGame extends FlameGame with TapCallbacks {
       if (row.position.y > size.y + 100) {
         row.removeFromParent();
         _obstacles.remove(row);
+        obstaclesCleared += 1;
       }
     }
   }

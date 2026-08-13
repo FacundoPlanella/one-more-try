@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:in_app_review/in_app_review.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -106,6 +107,25 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
+            title: Text(t.howToPlay),
+            subtitle: Text(
+              t.howToPlaySubtitle,
+              style: TextStyle(color: colors.text1),
+            ),
+            trailing: Icon(Icons.chevron_right_rounded, color: colors.text1),
+            onTap: () => _showHowToPlay(context),
+          ),
+          ListTile(
+            title: Text(t.rateApp),
+            subtitle: Text(
+              t.rateAppSubtitle,
+              style: TextStyle(color: colors.text1),
+            ),
+            trailing: Icon(Icons.star_rounded, color: colors.accent),
+            onTap: () => _rateApp(),
+          ),
+          const Divider(),
+          ListTile(
             title: Text(t.about),
             subtitle: Text(
               t.aboutSubtitle(GameConstants.appName),
@@ -135,6 +155,41 @@ class SettingsScreen extends StatelessWidget {
             ),
             trailing: Icon(Icons.open_in_new_rounded, color: colors.text1),
             onTap: () => _openPrivacyPolicy(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _rateApp() async {
+    final inAppReview = InAppReview.instance;
+    if (await inAppReview.isAvailable()) {
+      await inAppReview.requestReview();
+      return;
+    }
+    // En Android openStoreListing() no necesita appStoreId: usa el
+    // packageName de la app. iosAppStoreId solo aplica si algún día se
+    // publica en iOS.
+    await inAppReview.openStoreListing(
+      appStoreId: GameConstants.iosAppStoreId.isEmpty
+          ? null
+          : GameConstants.iosAppStoreId,
+    );
+  }
+
+  Future<void> _showHowToPlay(BuildContext context) async {
+    final colors = context.oneColors;
+    final t = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colors.bg1,
+        title: Text(t.tutorialTitle),
+        content: Text(t.tutorialSubtitle),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(t.gotIt),
           ),
         ],
       ),

@@ -35,11 +35,16 @@ class _OneMoreTryAppState extends State<OneMoreTryApp> with WidgetsBindingObserv
     switch (state) {
       case AppLifecycleState.resumed:
         audio.playMusic();
-      case AppLifecycleState.inactive:
+      // "inactive" es transitorio (diálogos del sistema, banners de ads,
+      // notificaciones) y no significa que el usuario salió de la app —
+      // pausar ahí puede cortar la música apenas arranca en algunos
+      // dispositivos. Solo pausamos cuando la app deja de ser visible.
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
         audio.stopMusic();
+      case AppLifecycleState.inactive:
+        break;
     }
   }
 

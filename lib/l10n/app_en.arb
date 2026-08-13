@@ -25,6 +25,13 @@
   "tutorialTitle": "Tap to change lane",
   "tutorialSubtitle": "Avoid blocks. One more try.",
   "tutorialCta": "Tap anywhere to start",
+  "tutorialSkip": "Skip",
+  "tutorialHint": "Tap anywhere to switch lanes",
+  "howToPlay": "How to play",
+  "howToPlaySubtitle": "Review the basics anytime",
+  "rateApp": "Rate this app",
+  "rateAppSubtitle": "Enjoying the game? Leave a review",
+  "gotIt": "Got it",
 
   "newBest": "NEW BEST",
   "dailyMissionComplete": "Daily mission complete",

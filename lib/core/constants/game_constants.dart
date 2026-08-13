@@ -8,6 +8,14 @@ class GameConstants {
   static const String privacyPolicyUrl =
       'https://sites.google.com/view/onemoretry-privacy';
   static const String supportEmail = 'enunfla.contact@gmail.com';
+  /// App Store numeric ID, para el fallback de "Rate this app" en iOS
+  /// (in_app_review lo necesita solo si requestReview() no está disponible).
+  /// Completar cuando la app se publique en la App Store.
+  static const String iosAppStoreId = '';
+
+  /// Obstáculos a esquivar durante el tutorial guiado antes de marcarlo
+  /// como completado (ver §9.3 del GDD).
+  static const int tutorialGuidedObstacles = 3;
 
   /// Altura reservada para el banner AdMob + margen (dp lógicos).
   static const double bannerReservedHeight = 64;
@@ -50,14 +58,17 @@ class GameConstants {
   static const int coinTrailEveryMin = 2;
   static const int coinTrailEveryMax = 5;
   static const int coinPatternLengthMin = 2;
-  static const int coinPatternLengthMax = 10;
+  static const int coinPatternLengthMax = 6;
 
   /// Probabilidad de sumar un carril extra con moneda a cada fila de una
   /// racha (además del carril "espina" del patrón), para que se vean
   /// agrupadas en vez de una única línea prolija. Cada carril extra
   /// adicional en la misma fila es menos probable ([coinTrailExtraLaneDecay]).
-  static const double coinTrailExtraLaneChance = 0.5;
-  static const double coinTrailExtraLaneDecay = 0.55;
+  /// Moderado a propósito: con el espaciado apretado de las rachas, un
+  /// valor alto acumula demasiadas monedas vivas a la vez (imán las
+  /// atrae todas juntas) y eso frena el juego en dispositivos de gama media.
+  static const double coinTrailExtraLaneChance = 0.3;
+  static const double coinTrailExtraLaneDecay = 0.5;
 
   /// Cada tantos segmentos (± aleatorio) se garantiza un power-up, sin
   /// importar el sorteo normal — si no, las rachas de moneda ocupan casi
