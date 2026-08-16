@@ -79,6 +79,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tutorialHint => '点击任意位置切换车道';
 
   @override
+  String get pauseTitle => '已暂停';
+
+  @override
+  String get pauseResume => '继续游戏';
+
+  @override
   String get howToPlay => '玩法说明';
 
   @override
@@ -89,6 +95,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rateAppSubtitle => '喜欢这个游戏吗？给我们留个评价吧';
+
+  @override
+  String get contactSupport => '联系与反馈';
+
+  @override
+  String get contactSupportSubtitle => '发送建议或反馈问题';
 
   @override
   String get gotIt => '知道了';
@@ -112,6 +124,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get playAgain => '再试一次';
+
+  @override
+  String get shareScore => '分享成绩';
+
+  @override
+  String shareScoreMessage(int score) {
+    return '我在《One more try.》中获得了 $score 分！你能超过我吗？';
+  }
+
+  @override
+  String get shareGame => '分享游戏';
+
+  @override
+  String get shareGameMessage => '《One more try.》——一款一触即玩的无尽跑酷游戏，快来试试吧！';
 
   @override
   String get menu => '菜单';
@@ -159,12 +185,31 @@ class AppLocalizationsZh extends AppLocalizations {
   String get buy => '购买';
 
   @override
+  String get cancel => '取消';
+
+  @override
+  String get confirmPurchaseTitle => '确认购买？';
+
+  @override
+  String confirmPurchaseSkinMessage(String name, int price) {
+    return '你将花费 $price 枚金币购买 $name。';
+  }
+
+  @override
   String get perkActiveLabel => '已激活 — 每局自动生效';
 
   @override
   String perkPurchasedSnackbar(String name) {
     return '$name 已装备 — 每局自动生效';
   }
+
+  @override
+  String skinPurchasedSnackbar(String name) {
+    return '$name 已解锁';
+  }
+
+  @override
+  String get purchaseFailedSnackbar => '购买未能完成';
 
   @override
   String get medalsTitle => '奖章与称号';
@@ -187,6 +232,14 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String statMinutes(String n) {
     return '$n 分钟';
+  }
+
+  @override
+  String get statDistance => '移动距离';
+
+  @override
+  String statMeters(Object n) {
+    return '$n 米';
   }
 
   @override
@@ -262,6 +315,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyPolicySubtitle => '游戏进度仅保存在本设备上。AdMob 可能会根据 Google 政策收集数据。';
+
+  @override
+  String get termsAndConditions => '条款与条件';
 
   @override
   String get creditsHeading => '鸣谢';

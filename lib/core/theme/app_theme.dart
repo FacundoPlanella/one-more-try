@@ -6,48 +6,25 @@ import 'app_colors.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData dark() => _build(
-        brightness: Brightness.dark,
-        bg0: AppColors.darkBg0,
-        bg1: AppColors.darkBg1,
-        text0: AppColors.darkText0,
-        text1: AppColors.darkText1,
-        accent: AppColors.darkAccent,
-        danger: AppColors.darkDanger,
-        success: AppColors.darkSuccess,
-      );
+  static ThemeData dark() {
+    const bg0 = AppColors.darkBg0;
+    const bg1 = AppColors.darkBg1;
+    const text0 = AppColors.darkText0;
+    const text1 = AppColors.darkText1;
+    const accent = AppColors.darkAccent;
+    const danger = AppColors.darkDanger;
+    const success = AppColors.darkSuccess;
 
-  static ThemeData light() => _build(
-        brightness: Brightness.light,
-        bg0: AppColors.lightBg0,
-        bg1: AppColors.lightBg1,
-        text0: AppColors.lightText0,
-        text1: AppColors.lightText1,
-        accent: AppColors.lightAccent,
-        danger: AppColors.lightDanger,
-        success: AppColors.lightSuccess,
-      );
-
-  static ThemeData _build({
-    required Brightness brightness,
-    required Color bg0,
-    required Color bg1,
-    required Color text0,
-    required Color text1,
-    required Color accent,
-    required Color danger,
-    required Color success,
-  }) {
     final base = ThemeData(
       useMaterial3: true,
-      brightness: brightness,
+      brightness: Brightness.dark,
       scaffoldBackgroundColor: bg0,
-      colorScheme: ColorScheme(
-        brightness: brightness,
+      colorScheme: const ColorScheme(
+        brightness: Brightness.dark,
         primary: accent,
-        onPrimary: brightness == Brightness.dark ? bg0 : Colors.white,
+        onPrimary: bg0,
         secondary: accent,
-        onSecondary: brightness == Brightness.dark ? bg0 : Colors.white,
+        onSecondary: bg0,
         error: danger,
         onError: Colors.white,
         surface: bg1,
@@ -73,7 +50,7 @@ class AppTheme {
         ),
       ),
       dividerColor: text1.withValues(alpha: 0.2),
-      extensions: [
+      extensions: const [
         OneThemeExtension(
           bg0: bg0,
           bg1: bg1,
@@ -82,12 +59,8 @@ class AppTheme {
           accent: accent,
           danger: danger,
           success: success,
-          lane: brightness == Brightness.dark
-              ? AppColors.darkLane
-              : AppColors.lightLane,
-          obstacle: brightness == Brightness.dark
-              ? AppColors.darkObstacle
-              : AppColors.lightObstacle,
+          lane: AppColors.darkLane,
+          obstacle: AppColors.darkObstacle,
         ),
       ],
     );

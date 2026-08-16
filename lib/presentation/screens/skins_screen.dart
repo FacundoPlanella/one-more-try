@@ -20,7 +20,10 @@ class SkinsScreen extends StatelessWidget {
     final t = AppLocalizations.of(context);
 
     return BannerScaffold(
-      appBar: AppBar(title: Text(t.skinsTitle)),
+      appBar: AppBar(
+        leading: WoodBackButton(tooltip: t.back),
+        title: TitlePlate(text: t.skinsTitle),
+      ),
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         itemCount: SkinCatalog.all.length,
@@ -30,18 +33,10 @@ class SkinsScreen extends StatelessWidget {
           final unlocked = save.unlockedSkins.contains(skin.id);
           final equipped = save.equippedSkin == skin.id;
           return InkWell(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             onTap: unlocked ? () => app.equipSkin(skin.id) : null,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colors.bg1,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: equipped ? colors.accent : colors.lane,
-                  width: equipped ? 2 : 1,
-                ),
-              ),
+            child: WoodPanel(
+              highlighted: equipped,
               child: Row(
                 children: [
                   SkinPreview(skin: skin),
@@ -78,7 +73,14 @@ class SkinsScreen extends StatelessWidget {
                     ),
                   ),
                   if (!unlocked)
-                    Icon(Icons.lock_outline_rounded, color: colors.text1),
+                    Semantics(
+                      label: SkinUnlockHint.resolve(context, skin),
+                      child: Image.asset(
+                        'assets/images/ui/indicador_skin_bloqueada.png',
+                        width: 34,
+                        height: 34,
+                      ),
+                    ),
                 ],
               ),
             ),

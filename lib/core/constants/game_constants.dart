@@ -12,6 +12,8 @@ class GameConstants {
   /// (in_app_review lo necesita solo si requestReview() no está disponible).
   /// Completar cuando la app se publique en la App Store.
   static const String iosAppStoreId = '';
+  static String get playStoreUrl =>
+      'https://play.google.com/store/apps/details?id=$packageId';
 
   /// Obstáculos a esquivar durante el tutorial guiado antes de marcarlo
   /// como completado (ver §9.3 del GDD).

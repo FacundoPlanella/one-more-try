@@ -1,6 +1,8 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flame/events.dart';
+import 'package:flame/flame.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +15,7 @@ import '../generation/segment.dart';
 import '../generation/segment_generator.dart';
 import 'components/obstacle_component.dart';
 import 'components/player_component.dart';
+import 'lane_perspective.dart';
 
 enum OneGameState { playing, dying, dead }
 
@@ -79,7 +82,7 @@ class OneGame extends FlameGame with TapCallbacks {
   double _spawnTimer = 0;
   double _dieTimer = 0;
   double _pulse = 0;
-  double _scrollOffset = 0;
+  ui.Image? _bgImage;
 
   /// true si la última fila generada tenía monedas de racha: hace que la
   /// próxima fila se dispare mucho más cerca (ver [_coinTrailRowSpacing]) en
@@ -121,6 +124,11 @@ class OneGame extends FlameGame with TapCallbacks {
 
   @override
   Future<void> onLoad() async {
+    try {
+      _bgImage = await Flame.images.load('backgrounds/forest_bg.png');
+    } catch (_) {
+      _bgImage = null;
+    }
     generator = SegmentGenerator(runSeed: runSeed);
     player = PlayerComponent(skin: skin);
     if (activePerks.contains(PerkEffect.startWithShield)) {
@@ -181,6 +189,8 @@ class OneGame extends FlameGame with TapCallbacks {
     for (final o in _obstacles) {
       o.laneWidth = _laneWidth;
       o.originX = _originX;
+      o.screenWidth = size.x;
+      o.playerY = player.position.y;
     }
     for (final o in _orbs) {
       // Una moneda que el imán ya está atrayendo dejó su carril a propósito
@@ -189,6 +199,7 @@ class OneGame extends FlameGame with TapCallbacks {
       // resize. Solo reubicamos las que siguen ancladas a su carril.
       if (!o.attracting) {
         o.updateLaneWidth(_laneWidth, _originX);
+        o.applyPerspective(player.position.y, size.x);
       }
     }
   }
@@ -214,6 +225,8 @@ class OneGame extends FlameGame with TapCallbacks {
         originX: _originX,
         rowHeight: _rowHeight,
         color: _currentObstacle,
+        screenWidth: size.x,
+        playerY: player.position.y,
       )..position = Vector2(0, y);
       _obstacles.add(row);
       add(row);
@@ -227,6 +240,7 @@ class OneGame extends FlameGame with TapCallbacks {
         originX: _originX,
         color: _colorForPickup(type),
       )..layoutY(y);
+      orb.applyPerspective(player.position.y, size.x);
       _orbs.add(orb);
       add(orb);
     }
@@ -238,6 +252,7 @@ class OneGame extends FlameGame with TapCallbacks {
         originX: _originX,
         color: _colorForPickup(PickupType.coin),
       )..layoutY(y);
+      orb.applyPerspective(player.position.y, size.x);
       _orbs.add(orb);
       add(orb);
     }
@@ -305,9 +320,6 @@ class OneGame extends FlameGame with TapCallbacks {
         curve.scrollSpeed(d) * (_slowmoTimer > 0 ? GameConstants.slowmoFactor : 1.0);
     final gap = curve.gapSeconds(d);
 
-    // Parallax lento: el fondo se mueve mucho más despacio que los obstáculos.
-    _scrollOffset = (_scrollOffset + speed * dt * 0.12) % 120;
-
     for (final o in _obstacles) {
       o.position.y += speed * dt;
     }
@@ -336,6 +348,7 @@ class OneGame extends FlameGame with TapCallbacks {
         }
       } else {
         orb.position.y += speed * dt;
+        orb.applyPerspective(player.position.y, size.x);
       }
     }
 
@@ -421,7 +434,9 @@ class OneGame extends FlameGame with TapCallbacks {
     _dieTimer = 0;
   }
 
-  void _drawGenericBg(Canvas canvas, Size screen) {
+  /// Fallback usado mientras `assets/images/backgrounds/forest_bg.png` no
+  /// terminó de cargar (o si falló la carga).
+  void _drawProceduralBg(Canvas canvas, Size screen) {
     final rect = Offset.zero & screen;
     final bg = _currentBg;
     final top = Color.lerp(bg, Colors.white, 0.04)!;
@@ -437,28 +452,24 @@ class OneGame extends FlameGame with TapCallbacks {
           stops: const [0.0, 0.55, 1.0],
         ).createShader(rect),
     );
+  }
 
-    // Soft drifting blobs — generic atmosphere, no themed art.
-    final blob = Paint()
-      ..color = Color.lerp(bg, accentColor, 0.35)!.withValues(alpha: 0.05);
-    for (var i = 0; i < 10; i++) {
-      final x = ((i * 73) % 97) / 97.0 * screen.width;
-      final y =
-          (((i * 41) % 83) / 83.0 * screen.height + _scrollOffset * 0.25) %
-              (screen.height + 60) -
-          30;
-      final r = 28.0 + (i % 4) * 14;
-      canvas.drawCircle(Offset(x, y), r, blob);
+  void _drawGenericBg(Canvas canvas, Size screen) {
+    final rect = Offset.zero & screen;
+    final img = _bgImage;
+    if (img == null || screen.width <= 0 || screen.height <= 0) {
+      _drawProceduralBg(canvas, screen);
+    } else {
+      // Imagen fija, sin scroll: se recorta a lo Cover para llenar la
+      // pantalla completa sin deformarla.
+      _drawImageCover(canvas, img, rect);
+
+      // Velo de color sutil: mantiene la variedad de matiz por score y da
+      // contraste contra obstáculos/HUD sobre el arte fijo.
+      canvas.drawRect(rect, Paint()..color = _currentBg.withValues(alpha: 0.16));
     }
 
-    // Subtle lane guides.
-    final lanePaint = Paint()
-      ..color = _currentLane
-      ..strokeWidth = 1.4;
-    for (var i = 1; i < GameConstants.laneCount; i++) {
-      final x = _laneWidth * i;
-      canvas.drawLine(Offset(x, 0), Offset(x, screen.height), lanePaint);
-    }
+    _drawLaneGuides(canvas, screen);
 
     // Soft vignette.
     canvas.drawRect(
@@ -473,6 +484,52 @@ class OneGame extends FlameGame with TapCallbacks {
           ],
         ).createShader(rect),
     );
+  }
+
+  /// Recorta [image] para llenar [dst] por completo (equivalente a
+  /// BoxFit.cover), igual que hace ObstacleRowComponent con su sprite.
+  void _drawImageCover(Canvas canvas, ui.Image image, Rect dst) {
+    final srcW = image.width.toDouble();
+    final srcH = image.height.toDouble();
+    final srcAspect = srcW / srcH;
+    final dstAspect = dst.width / dst.height;
+    final Rect src;
+    if (srcAspect > dstAspect) {
+      final cropW = srcH * dstAspect;
+      src = Rect.fromLTWH((srcW - cropW) / 2, 0, cropW, srcH);
+    } else {
+      final cropH = srcW / dstAspect;
+      src = Rect.fromLTWH(0, (srcH - cropH) / 2, srcW, cropH);
+    }
+    canvas.drawImageRect(image, src, dst, Paint()..filterQuality = FilterQuality.low);
+  }
+
+  /// Líneas divisorias de carril con la misma perspectiva que obstáculos y
+  /// monedas: convergen hacia el centro en el horizonte (y = 0) y llegan a
+  /// ancho completo a la altura del jugador, sin salto en ese punto.
+  void _drawLaneGuides(Canvas canvas, Size screen) {
+    final lanePaint = Paint()
+      ..color = _currentLane
+      ..strokeWidth = 1.4;
+    if (!isLoaded) {
+      for (var i = 1; i < GameConstants.laneCount; i++) {
+        final x = _laneWidth * i;
+        canvas.drawLine(Offset(x, 0), Offset(x, screen.height), lanePaint);
+      }
+      return;
+    }
+    final playerY = player.position.y;
+    for (var i = 1; i < GameConstants.laneCount; i++) {
+      final flatX = _laneWidth * i;
+      final topX = LanePerspective.apply(
+        flatX: flatX,
+        y: 0,
+        playerY: playerY,
+        screenWidth: screen.width,
+      );
+      canvas.drawLine(Offset(topX, 0), Offset(flatX, playerY), lanePaint);
+      canvas.drawLine(Offset(flatX, playerY), Offset(flatX, screen.height), lanePaint);
+    }
   }
 
   @override

@@ -234,6 +234,18 @@ abstract class AppLocalizations {
   /// **'Tap anywhere to switch lanes'**
   String get tutorialHint;
 
+  /// No description provided for @pauseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get pauseTitle;
+
+  /// No description provided for @pauseResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get pauseResume;
+
   /// No description provided for @howToPlay.
   ///
   /// In en, this message translates to:
@@ -257,6 +269,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enjoying the game? Leave a review'**
   String get rateAppSubtitle;
+
+  /// No description provided for @contactSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact & feedback'**
+  String get contactSupport;
+
+  /// No description provided for @contactSupportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a suggestion or report a bug'**
+  String get contactSupportSubtitle;
 
   /// No description provided for @gotIt.
   ///
@@ -299,6 +323,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'One more try.'**
   String get playAgain;
+
+  /// No description provided for @shareScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Share score'**
+  String get shareScore;
+
+  /// No description provided for @shareScoreMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'I scored {score} in One more try.! Can you beat it?'**
+  String shareScoreMessage(int score);
+
+  /// No description provided for @shareGame.
+  ///
+  /// In en, this message translates to:
+  /// **'Share game'**
+  String get shareGame;
+
+  /// No description provided for @shareGameMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'One more try. — a one-tap endless runner. Give it a try!'**
+  String get shareGameMessage;
 
   /// No description provided for @menu.
   ///
@@ -378,6 +426,24 @@ abstract class AppLocalizations {
   /// **'Buy'**
   String get buy;
 
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @confirmPurchaseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm purchase?'**
+  String get confirmPurchaseTitle;
+
+  /// No description provided for @confirmPurchaseSkinMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re about to buy {name} for {price} coins.'**
+  String confirmPurchaseSkinMessage(String name, int price);
+
   /// No description provided for @perkActiveLabel.
   ///
   /// In en, this message translates to:
@@ -389,6 +455,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} equipped — active in every run'**
   String perkPurchasedSnackbar(String name);
+
+  /// No description provided for @skinPurchasedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} unlocked'**
+  String skinPurchasedSnackbar(String name);
+
+  /// No description provided for @purchaseFailedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase couldn\'t be completed'**
+  String get purchaseFailedSnackbar;
 
   /// No description provided for @medalsTitle.
   ///
@@ -431,6 +509,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{n} min'**
   String statMinutes(String n);
+
+  /// No description provided for @statDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Distance traveled'**
+  String get statDistance;
+
+  /// No description provided for @statMeters.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} m'**
+  String statMeters(Object n);
 
   /// No description provided for @statOrbsCollected.
   ///
@@ -575,6 +665,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Progress is stored only on this device. AdMob may collect data per Google policy.'**
   String get privacyPolicySubtitle;
+
+  /// No description provided for @termsAndConditions.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms & conditions'**
+  String get termsAndConditions;
 
   /// No description provided for @creditsHeading.
   ///

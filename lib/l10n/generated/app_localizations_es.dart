@@ -79,6 +79,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get tutorialHint => 'Tocá en cualquier lado para cambiar de carril';
 
   @override
+  String get pauseTitle => 'Pausa';
+
+  @override
+  String get pauseResume => 'Reanudar';
+
+  @override
   String get howToPlay => 'Cómo jugar';
 
   @override
@@ -89,6 +95,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get rateAppSubtitle => '¿Te está gustando? Dejá tu reseña';
+
+  @override
+  String get contactSupport => 'Contacto y feedback';
+
+  @override
+  String get contactSupportSubtitle =>
+      'Mandanos una sugerencia o reportá un bug';
 
   @override
   String get gotIt => 'Entendido';
@@ -112,6 +125,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get playAgain => 'One more try.';
+
+  @override
+  String get shareScore => 'Compartir puntaje';
+
+  @override
+  String shareScoreMessage(int score) {
+    return '¡Saqué $score puntos en One more try.! ¿Podés superarlo?';
+  }
+
+  @override
+  String get shareGame => 'Compartir juego';
+
+  @override
+  String get shareGameMessage =>
+      'One more try. — un juego de un solo toque, sin fin. ¡Probalo!';
 
   @override
   String get menu => 'Menú';
@@ -159,12 +187,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get buy => 'Comprar';
 
   @override
+  String get cancel => 'Cancelar';
+
+  @override
+  String get confirmPurchaseTitle => '¿Confirmar compra?';
+
+  @override
+  String confirmPurchaseSkinMessage(String name, int price) {
+    return 'Vas a comprar $name por $price monedas.';
+  }
+
+  @override
   String get perkActiveLabel => 'Activo — en cada partida';
 
   @override
   String perkPurchasedSnackbar(String name) {
     return '$name equipado — activo en cada partida';
   }
+
+  @override
+  String skinPurchasedSnackbar(String name) {
+    return '$name desbloqueada';
+  }
+
+  @override
+  String get purchaseFailedSnackbar => 'No se pudo completar la compra';
 
   @override
   String get medalsTitle => 'Medallas y Títulos';
@@ -187,6 +234,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String statMinutes(String n) {
     return '$n min';
+  }
+
+  @override
+  String get statDistance => 'Distancia recorrida';
+
+  @override
+  String statMeters(Object n) {
+    return '$n m';
   }
 
   @override
@@ -264,6 +319,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get privacyPolicySubtitle =>
       'El progreso se guarda solo en este dispositivo. AdMob puede recolectar datos según la política de Google.';
+
+  @override
+  String get termsAndConditions => 'Términos y condiciones';
 
   @override
   String get creditsHeading => 'Créditos';

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../widgets/common_widgets.dart';
 import 'home_screen.dart';
 
 /// Startup attribution for third-party art, then continues to Home.
@@ -60,40 +61,43 @@ class _CreditsScreenState extends State<CreditsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
         child: Column(
           children: [
-            Text(
-              t.creditsHeading,
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: colors.text0,
+            TitlePlate(text: t.creditsHeading, height: 56, fontSize: 24),
+            const SizedBox(height: 28),
+            IgnorePointer(
+              child: Image.asset(
+                'assets/images/ui/icono_creditos.png',
+                width: 48,
+                height: 48,
               ),
             ),
-            const SizedBox(height: 28),
-            Image.asset(
-              'assets/images/creatures/players/default.png',
-              width: 64,
-              height: 64,
-              filterQuality: FilterQuality.none,
-            ),
             const SizedBox(height: 20),
-            _CreditBlock(
-              colors: colors,
-              label: t.pixelArtLabel,
-              title: t.philippineMythCreatures,
-              author: t.byShade,
-              note: t.cc0Note,
-              linkLabel: t.viewOnItch,
-              onViewPack: _openShadePack,
-            ),
-            const SizedBox(height: 32),
-            _CreditBlock(
-              colors: colors,
-              label: t.uiArtLabel,
-              title: t.superRetroWorldPack,
-              author: t.bySuperRetroAuthors,
-              note: t.superRetroLicenseNote,
-              linkLabel: t.viewOnItch,
-              onViewPack: _openSuperRetroPack,
+            ContentCard(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+              child: Column(
+                children: [
+                  _CreditBlock(
+                    colors: colors,
+                    label: t.pixelArtLabel,
+                    title: t.philippineMythCreatures,
+                    author: t.byShade,
+                    note: t.cc0Note,
+                    linkLabel: t.viewOnItch,
+                    onViewPack: _openShadePack,
+                  ),
+                  const SizedBox(height: 20),
+                  const SectionDivider(),
+                  const SizedBox(height: 12),
+                  _CreditBlock(
+                    colors: colors,
+                    label: t.uiArtLabel,
+                    title: t.superRetroWorldPack,
+                    author: t.bySuperRetroAuthors,
+                    note: t.superRetroLicenseNote,
+                    linkLabel: t.viewOnItch,
+                    onViewPack: _openSuperRetroPack,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 40),
             Text(
@@ -104,12 +108,7 @@ class _CreditsScreenState extends State<CreditsScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            if (widget.fromSettings)
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(t.back),
-              )
-            else
+            if (!widget.fromSettings)
               Text(
                 t.loading,
                 style: GoogleFonts.manrope(
@@ -136,7 +135,18 @@ class _CreditsScreenState extends State<CreditsScreen> {
             ],
           ),
         ),
-        child: body,
+        child: Stack(
+          children: [
+            body,
+            if (widget.fromSettings)
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: WoodBackButton(tooltip: t.back),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -207,9 +217,23 @@ class _CreditBlock extends StatelessWidget {
         const SizedBox(height: 16),
         TextButton(
           onPressed: onViewPack,
-          child: Text(
-            linkLabel,
-            style: GoogleFonts.manrope(color: colors.accent),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                linkLabel,
+                style: GoogleFonts.manrope(
+                  color: colors.accent,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Image.asset(
+                'assets/images/ui/icono_enlace_externo.png',
+                width: 16,
+                height: 16,
+              ),
+            ],
           ),
         ),
       ],

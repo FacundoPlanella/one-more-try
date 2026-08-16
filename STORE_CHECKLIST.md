@@ -8,9 +8,23 @@ Package: `one.more.try`
 - [ ] Cuenta [Google Play Console](https://play.google.com/console) (pago único ~USD 25)
 - [ ] Aceptar acuerdos de desarrollador
 
-## 2. Firma de la app (obligatorio)
+## 2. Firma de la app (obligatorio) — ✅ hecho
 
-Generar keystore de upload (una sola vez, **guardalo seguro + backup**):
+Keystore ya generada (`android/keystore/upload-keystore.jks`) y `android/key.properties` configurado.
+`.aab` de release ya compilado y firmado con esa key: `build/app/outputs/bundle/release/app-release.aab` (v1.0.1, versionCode 10).
+
+**Importante:** Play Console rechaza un `.aab` si su versionCode ya fue subido antes (aunque sea a un track de prueba). Antes de cada subida, subí el número después del `+` en `version:` de `pubspec.yaml` (ej. `1.0.1+10` → `1.0.1+11`) y volvé a compilar.
+
+Para regenerar tras el próximo cambio de versión (subí `version:` en `pubspec.yaml`, formato `X.Y.Z+N`, `N` siempre mayor al anterior):
+
+```powershell
+$env:PATH = "$env:LOCALAPPDATA\flutter\bin;$env:PATH"
+flutter build appbundle --release
+```
+
+Salida: `build/app/outputs/bundle/release/app-release.aab` — **este es el archivo que se sube a Play Console** (no el `.apk`).
+
+Pasos históricos para generar la keystore (ya no hace falta repetir, dejado como referencia):
 
 ```powershell
 cd d:\Juegos\One\one_more_try\android\keystore
@@ -35,14 +49,6 @@ storeFile=../keystore/upload-keystore.jks
 ```
 
 `android/app/build.gradle.kts` ya usa esa firma automáticamente si existe `key.properties`.
-
-Build de producción:
-
-```bash
-flutter build appbundle --release
-```
-
-Salida: `build/app/outputs/bundle/release/app-release.aab`
 
 ## 3. AdMob (producción)
 
@@ -85,11 +91,50 @@ Texto fuente: `PRIVACY_POLICY.md`. También enlazada dentro del juego en Setting
 - [ ] Declarar que hay ads
 - [ ] Países de distribución
 
-## 7. Testing track
+## 7. Fase de prueba (testing track)
 
-1. Subir `.aab` a **Prueba interna**
-2. Probar en 1–2 dispositivos
-3. Luego **producción** (revisión Google: horas–días)
+Google exige pasar por testing antes de producción si la cuenta de desarrollador es nueva (creada desde nov. 2023): **mínimo 12 testers activos durante 14 días seguidos** en un track de **Prueba cerrada** antes de poder publicar en producción. Prueba interna no cuenta para ese requisito, pero es más rápida para probar el build vos mismo.
+
+### 7.1 Prueba interna (primero — feedback inmediato, sin espera de revisión)
+
+1. Play Console → tu app → **Testing → Internal testing** → **Create new release**
+2. Subí `build/app/outputs/bundle/release/app-release.aab`
+3. Completá "Release notes" (ej: "Primera build de prueba")
+4. **Testers** → pestaña → creá una lista de emails (los tuyos + gente de confianza) o generá el link de opt-in y compartilo
+5. Los testers necesitan aceptar la invitación (el link de opt-in) antes de poder instalar desde Play Store con esa cuenta
+6. No hay revisión de Google — disponible en minutos
+
+### 7.2 Prueba cerrada (obligatoria antes de producción, cuenta nueva)
+
+1. **Testing → Closed testing** → crear track (ej. "Prueba cerrada")
+2. Subí el mismo `.aab` (o promocioná el release desde Internal testing)
+3. Cargá **al menos 12 testers** que acepten el opt-in y abran la app
+4. Dejalo activo **14 días corridos** con esos testers interactuando (no basta con instalarla una vez y listo — Google mide uso real)
+5. Play Console va a mostrar el progreso de este requisito en la sección de producción una vez que esté disponible
+
+### 7.3 Anuncios durante testing
+
+Los IDs de AdMob en el código **son los de test oficiales de Google** (`ca-app-pub-3940256099942544/...`) — correcto para esta fase, no los cambies todavía. Recién reemplazalos por los reales (paso 3 de este documento) cuando vayas a subir el release de **producción**, nunca antes: mostrar ads reales en testing viola la política de tráfico inválido de AdMob.
+
+### 7.4 Formularios previos al primer release (se piden antes de poder subir cualquier track)
+
+Play Console te va a pedir completar esto para habilitar publicar en cualquier track:
+
+- **Content rating**: cuestionario → sin violencia, sin contenido para adultos, sin compras, sin chat/usuarios generando contenido → da PEGI 3 / Everyone
+- **Data safety**: basado en `PRIVACY_POLICY.md` y en que la app usa `google_mobile_ads` + `shared_preferences` local:
+  - No se recopilan datos personales del usuario (sin login, sin nombre/email/teléfono)
+  - **Sí** se comparte con terceros: identificadores de publicidad (Advertising ID) vía Google AdMob, para mostrar anuncios y prevenir fraude
+  - No hay datos financieros, ubicación precisa, ni contactos
+  - Datos de juego (puntaje, progreso) se guardan solo localmente en el dispositivo, no se transmiten
+  - Marcar "Datos cifrados en tránsito": sí (lo maneja el SDK de Google Ads)
+  - Marcar que el usuario puede pedir borrado de datos: no aplica (no hay cuenta ni servidor propio)
+- **Ads declaration**: marcar que la app **sí** muestra anuncios
+- **Target audience / público objetivo**: elegí el rango de edad real esperado (probablemente 13+ o "todas las edades" según cómo definas el público — si marcás que apunta también a niños, AdMob tiene restricciones extra, mejor marcar audiencia general sin apuntar a niños si el juego no está diseñado específicamente para eso)
+- **App access**: "Todas las funciones están disponibles sin restricciones" (no hay login)
+
+### 7.5 Producción
+
+Una vez cumplido el requisito de prueba cerrada (12 testers × 14 días) y completados los formularios: **Production → Create new release**, subir `.aab` con IDs reales de AdMob, revisión de Google (horas a días).
 
 ## 8. Post-lanzamiento
 

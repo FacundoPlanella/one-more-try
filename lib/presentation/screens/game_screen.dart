@@ -32,6 +32,7 @@ class _GameScreenState extends State<GameScreen> {
   int _score = 0;
   int _coins = 0;
   bool _ended = false;
+  bool _paused = false;
   late OneGame _game;
   late _TutorialStage _tutorialStage;
   Timer? _hudTimer;
@@ -149,10 +150,24 @@ class _GameScreenState extends State<GameScreen> {
     context.read<AppController>().completeTutorial();
   }
 
+  /// El botón de pausa se oculta en cuanto `_paused` pasa a true (ver
+  /// build()), así que no puede haber un segundo toque en vuelo — no hace
+  /// falta un flag de debounce aparte.
+  void _pauseGame() {
+    if (_paused || _ended) return;
+    setState(() => _paused = true);
+    _game.paused = true;
+  }
+
+  void _resumeGame() {
+    if (!_paused) return;
+    setState(() => _paused = false);
+    _game.paused = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
-    final colors = context.oneColors;
     final t = AppLocalizations.of(context);
 
     return BannerScaffold(
@@ -166,50 +181,44 @@ class _GameScreenState extends State<GameScreen> {
                 children: [
                   Row(
                     children: [
-                      IconButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(Icons.close_rounded, color: colors.text1),
-                      ),
+                      if (_tutorialStage != _TutorialStage.intro && !_paused)
+                        AssetIconButton(
+                          asset: 'assets/images/ui/boton_pausa.png',
+                          size: 44,
+                          tooltip: t.pauseTitle,
+                          onPressed: _pauseGame,
+                        )
+                      else
+                        const SizedBox(width: 44, height: 44),
                       Expanded(
                         child: Column(
                           children: [
                             Builder(
                               builder: (context) {
                                 final multiplierOn = _game.multiplierTimer > 0;
-                                return AnimatedDefaultTextStyle(
-                                  duration: const Duration(milliseconds: 150),
-                                  style: GoogleFonts.outfit(
-                                    fontSize: multiplierOn ? 42 : 36,
-                                    fontWeight: FontWeight.w700,
-                                    color: multiplierOn
-                                        ? const Color(0xFFF472B6)
-                                        : colors.text0,
-                                  ),
-                                  child: Text(
-                                    multiplierOn ? '$_score  ✖2' : '$_score',
-                                    textAlign: TextAlign.center,
-                                  ),
+                                return HudCounter(
+                                  value: multiplierOn ? '$_score ✖2' : '$_score',
+                                  iconAsset: 'assets/images/ui/icono_puntos.png',
+                                  width: 150,
+                                  valueColor: multiplierOn
+                                      ? const Color(0xFFF472B6)
+                                      : null,
                                 );
                               },
                             ),
-                            CoinLabel(
-                              amount: _coins,
-                              iconSize: 14,
-                              style: GoogleFonts.manrope(
-                                color: colors.text1,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
+                            const SizedBox(height: 4),
+                            HudCounter(
+                              value: '$_coins',
+                              iconAsset: 'assets/images/ui/icono_moneda.png',
+                              width: 120,
                             ),
                           ],
                         ),
                       ),
-                      Text(
-                        t.bestScoreLabel(app.save.bestScore),
-                        style: GoogleFonts.manrope(
-                          color: colors.text1,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      HudCounter(
+                        value: '${app.save.bestScore}',
+                        iconAsset: 'assets/images/ui/icono_puntos.png',
+                        width: 110,
                       ),
                     ],
                   ),
@@ -225,6 +234,11 @@ class _GameScreenState extends State<GameScreen> {
             _TutorialIntroCard(
               onStart: _startGuidedTutorial,
               onSkip: _skipTutorial,
+            ),
+          if (_paused)
+            _PauseOverlay(
+              onResume: _resumeGame,
+              onMenu: () => Navigator.of(context).pop(),
             ),
         ],
       ),
@@ -262,13 +276,122 @@ class _PowerBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.18),
+        color: Colors.black.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
+        border: Border.all(color: color.withValues(alpha: 0.85), width: 1.4),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(emoji, style: const TextStyle(fontSize: 13)),
+    );
+  }
+}
+
+/// Interfaz de pausa: aparece cuando el jugador toca el botón de pausa
+/// (boton_pausa.png). El propio juego ya está detenido (`_game.paused`) al
+/// montarse este overlay, así que "Resume" es lo único que reactiva el
+/// loop. "Menu" corta la partida y vuelve al Home.
+class _PauseOverlay extends StatefulWidget {
+  const _PauseOverlay({required this.onResume, required this.onMenu});
+
+  final VoidCallback onResume;
+  final VoidCallback onMenu;
+
+  @override
+  State<_PauseOverlay> createState() => _PauseOverlayState();
+}
+
+class _PauseOverlayState extends State<_PauseOverlay> {
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black54,
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: AspectRatio(
+                  // Proporción original de panel_pausa.png — no se deforma.
+                  aspectRatio: 1122 / 1402,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Positioned.fill(
+                        child: Image.asset(
+                          'assets/images/ui/panel_pausa.png',
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 44,
+                          vertical: 76,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              t.pauseTitle,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: woodPlateTextPrimary,
+                                shadows: const [
+                                  Shadow(
+                                    color: Color(0xCC1B0F06),
+                                    offset: Offset(0, 2),
+                                    blurRadius: 3,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: 200,
+                              child: PrimaryButton(
+                                label: t.pauseResume,
+                                onPressed: widget.onResume,
+                                expanded: false,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SecondaryActionButton(
+                              label: t.menu,
+                              onPressed: widget.onMenu,
+                              width: 140,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: 26,
+                        right: 20,
+                        child: PanelCloseButton(
+                          tooltip: t.pauseResume,
+                          onPressed: widget.onResume,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -287,46 +410,45 @@ class _TutorialIntroCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onStart,
         child: Container(
-          color: Colors.black45,
+          color: Colors.black54,
           alignment: Alignment.center,
           padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                t.tutorialTitle,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: colors.text0,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                t.tutorialSubtitle,
-                style: GoogleFonts.manrope(color: colors.text1),
-              ),
-              const SizedBox(height: 18),
-              Text(
-                t.tutorialCta,
-                style: GoogleFonts.manrope(
-                  color: colors.accent,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: onSkip,
-                child: Text(
-                  t.tutorialSkip,
-                  style: GoogleFonts.manrope(
-                    color: colors.text1,
-                    fontWeight: FontWeight.w600,
+          child: WoodPanel(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  t.tutorialTitle,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.outfit(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: colors.text0,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  t.tutorialSubtitle,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(color: colors.text1),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  t.tutorialCta,
+                  style: GoogleFonts.manrope(
+                    color: colors.accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SecondaryActionButton(
+                  label: t.tutorialSkip,
+                  onPressed: onSkip,
+                  width: 140,
+                ),
+              ],
+            ),
           ),
         ),
       ),

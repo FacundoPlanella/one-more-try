@@ -5,8 +5,11 @@ import 'package:flame/flame.dart';
 
 import '../../core/constants/game_constants.dart';
 import '../../generation/segment.dart';
+import '../lane_perspective.dart';
 
-/// Obstáculos genéricos: bloques redondeados (sin sprites).
+/// Obstáculos: roca giratoria (assets/images/obstacles/roca_giro_01..10.png,
+/// animación de 10 frames) recortada a lo Cover para llenar cada celda de
+/// carril, sin bordes.
 class ObstacleRowComponent extends PositionComponent {
   ObstacleRowComponent({
     required this.mask,
@@ -14,37 +17,107 @@ class ObstacleRowComponent extends PositionComponent {
     required this.originX,
     required this.rowHeight,
     required this.color,
+    required this.screenWidth,
+    required this.playerY,
   }) : super(priority: 0);
+
+  static const int _frameCount = 10;
+
+  /// Segundos por frame: 10 frames a este ritmo dan una vuelta completa
+  /// cada 0.7s, un giro rápido pero legible.
+  static const double _frameDuration = 0.07;
 
   final int mask;
   double laneWidth;
   double originX;
   final double rowHeight;
   Color color;
+  double screenWidth;
+  double playerY;
+
+  List<Image> _frames = const [];
+  double _animTime = 0;
 
   bool get isOffscreen => position.y - rowHeight > 2000;
 
   @override
+  Future<void> onLoad() async {
+    try {
+      _frames = await Future.wait([
+        for (var i = 1; i <= _frameCount; i++)
+          Flame.images.load('obstacles/roca_giro_${i.toString().padLeft(2, '0')}.png'),
+      ]);
+    } catch (_) {
+      _frames = const [];
+    }
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    _animTime += dt;
+  }
+
+  @override
   void render(Canvas canvas) {
     final fill = Paint()..color = color;
-    final edge = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = Color.lerp(color, const Color(0xFFFFFFFF), 0.12)!
-          .withValues(alpha: 0.35);
-
+    final frames = _frames;
+    final image = frames.isEmpty
+        ? null
+        : frames[(_animTime / _frameDuration).floor() % frames.length];
     final h = rowHeight * 0.52;
+    final rowY = position.y;
     for (var lane = 0; lane < GameConstants.laneCount; lane++) {
       if (!LaneMask.isBlocked(mask, lane)) continue;
-      final x = originX + lane * laneWidth + laneWidth * 0.14 - position.x;
-      final w = laneWidth * 0.72;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x, -h / 2, w, h),
-        const Radius.circular(12),
-      );
-      canvas.drawRRect(rect, fill);
-      canvas.drawRRect(rect, edge);
+      final cellLeftFlat = originX + lane * laneWidth + laneWidth * 0.14;
+      final cellRightFlat = cellLeftFlat + laneWidth * 0.72;
+      final left = LanePerspective.apply(
+            flatX: cellLeftFlat,
+            y: rowY,
+            playerY: playerY,
+            screenWidth: screenWidth,
+          ) -
+          position.x;
+      final right = LanePerspective.apply(
+            flatX: cellRightFlat,
+            y: rowY,
+            playerY: playerY,
+            screenWidth: screenWidth,
+          ) -
+          position.x;
+      final rect = Rect.fromLTWH(left, -h / 2, right - left, h);
+      if (image != null) {
+        _drawCover(canvas, image, rect);
+      } else {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect, const Radius.circular(12)),
+          fill,
+        );
+      }
     }
+  }
+
+  /// Recorta [image] para llenar [dst] por completo (equivalente a
+  /// BoxFit.cover) en vez de deformarla o dejarla más chica que la celda.
+  void _drawCover(Canvas canvas, Image image, Rect dst) {
+    final srcW = image.width.toDouble();
+    final srcH = image.height.toDouble();
+    final srcAspect = srcW / srcH;
+    final dstAspect = dst.width / dst.height;
+    final Rect src;
+    if (srcAspect > dstAspect) {
+      final cropW = srcH * dstAspect;
+      src = Rect.fromLTWH((srcW - cropW) / 2, 0, cropW, srcH);
+    } else {
+      final cropH = srcW / dstAspect;
+      src = Rect.fromLTWH(0, (srcH - cropH) / 2, srcW, cropH);
+    }
+    canvas.drawImageRect(
+      image,
+      src,
+      dst,
+      Paint()..filterQuality = FilterQuality.low,
+    );
   }
 
   /// Colisión por carril con perdón horizontal.
@@ -88,16 +161,34 @@ class OrbComponent extends PositionComponent {
 
   Sprite? _icon;
 
+  /// X "plana" del centro del carril, antes de aplicar la perspectiva del
+  /// camino (ver [applyPerspective]).
+  double get flatX => originX + (lane + 0.5) * laneWidth;
+
   void layoutY(double y) {
-    position = Vector2(originX + (lane + 0.5) * laneWidth, y);
+    position.y = y;
+    position.x = flatX;
   }
 
-  /// Recalcula solo la X (según el nuevo ancho de carril), preservando la Y
-  /// —que representa el progreso de scroll, no la posición horizontal—.
+  /// Recalcula el ancho de carril tras un resize, preservando la Y —que
+  /// representa el progreso de scroll, no la posición horizontal—. La X
+  /// definitiva la fija [applyPerspective], que el caller debe invocar
+  /// después (necesita playerY/screenWidth, que este componente no conoce).
   void updateLaneWidth(double newLaneWidth, double newOriginX) {
     laneWidth = newLaneWidth;
     originX = newOriginX;
-    position.x = originX + (lane + 0.5) * laneWidth;
+  }
+
+  /// Ajusta la X visible para que la moneda siga el camino en perspectiva
+  /// del fondo en vez de una grilla de carriles recta. Se llama cada frame
+  /// mientras no está siendo atraída por el imán (ver [attracting]).
+  void applyPerspective(double playerY, double screenWidth) {
+    position.x = LanePerspective.apply(
+      flatX: flatX,
+      y: position.y,
+      playerY: playerY,
+      screenWidth: screenWidth,
+    );
   }
 
   @override

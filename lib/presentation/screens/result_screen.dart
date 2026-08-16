@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../core/constants/game_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/progression/progression_service.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -42,27 +44,27 @@ class ResultScreen extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
                     letterSpacing: 2,
+                    shadows: const [
+                      Shadow(
+                        color: Color(0x731B0F06),
+                        offset: Offset(0, 1),
+                        blurRadius: 3,
+                      ),
+                    ],
                   ),
                 ),
-              const SizedBox(height: 8),
-              Text(
-                '$score',
-                style: GoogleFonts.outfit(
-                  fontSize: 72,
-                  fontWeight: FontWeight.w700,
-                  color: colors.text0,
-                  height: 1,
-                ),
-              ),
+              const SizedBox(height: 10),
+              PointsCounter(value: score, width: 240, fontSize: 48),
               if (coins > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: CoinLabel(
                     amount: coins,
                     prefix: '+',
-                    iconSize: 18,
+                    iconSize: 16,
+                    width: 140,
                     style: GoogleFonts.manrope(
-                      color: colors.text1,
+                      color: woodPlateTextSecondary,
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                     ),
@@ -100,6 +102,11 @@ class ResultScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               SubtleLink(
+                label: t.shareScore,
+                onTap: () => _shareScore(context),
+              ),
+              const SizedBox(height: 4),
+              SubtleLink(
                 label: t.menu,
                 onTap: () {
                   Navigator.of(context).pushAndRemoveUntil(
@@ -117,6 +124,15 @@ class ResultScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _shareScore(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    await SharePlus.instance.share(
+      ShareParams(
+        text: '${t.shareScoreMessage(score)}\n${GameConstants.playStoreUrl}',
+      ),
+    );
+  }
 }
 
 class _Chip extends StatelessWidget {
@@ -130,21 +146,30 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Image.asset(icon!, width: 18, height: 18, filterQuality: FilterQuality.none),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            text,
-            style: GoogleFonts.manrope(
-              color: color,
-              fontWeight: FontWeight.w600,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.16),
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(color: color.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Image.asset(icon!, width: 18, height: 18, filterQuality: FilterQuality.none),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              text,
+              style: GoogleFonts.manrope(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

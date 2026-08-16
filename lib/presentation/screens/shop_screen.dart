@@ -18,25 +18,26 @@ class ShopScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
-    final colors = context.oneColors;
     final save = app.save;
     final t = AppLocalizations.of(context);
     final shopSkins = SkinCatalog.all.where((s) => s.isShopExclusive).toList();
 
     return BannerScaffold(
       appBar: AppBar(
-        title: Text(t.shopTitle),
+        leading: WoodBackButton(tooltip: t.back),
+        title: TitlePlate(text: t.shopTitle),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Center(
               child: CoinLabel(
                 amount: save.coins,
-                iconSize: 18,
+                iconSize: 16,
+                width: 132,
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
-                  color: colors.text0,
+                  color: woodPlateTextPrimary,
                 ),
               ),
             ),
@@ -87,65 +88,143 @@ class _ShopSkinTile extends StatelessWidget {
     final afford = save.coins >= skin.priceCoins!;
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.bg1,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: equipped ? colors.accent : colors.lane,
-          width: equipped ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          SkinPreview(skin: skin),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    RarityDiamond(color: skin.color, size: 16),
-                    const SizedBox(width: 6),
-                    Text(
-                      skin.name,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    ),
-                  ],
+      decoration: equipped
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.accent.withValues(alpha: 0.55),
+                  blurRadius: 14,
+                  spreadRadius: 1,
                 ),
-                if (skin.creatureName != null)
-                  Text(
-                    skin.creatureName!,
-                    style: GoogleFonts.manrope(color: colors.text1, fontSize: 12),
-                  ),
-                owned
-                    ? Text(
-                        equipped ? t.equipped : t.owned,
-                        style: GoogleFonts.manrope(color: colors.text1, fontSize: 13),
-                      )
-                    : CoinLabel(
-                        amount: skin.priceCoins!,
-                        iconSize: 13,
-                        style: GoogleFonts.manrope(color: colors.text1, fontSize: 13),
-                      ),
               ],
-            ),
-          ),
-          if (owned)
-            TextButton(
-              onPressed: equipped ? null : () => app.equipSkin(skin.id),
-              child: Text(equipped ? t.equipped : t.equip),
             )
-          else
-            FilledButton(
-              onPressed: afford ? () => app.purchaseSkin(skin.id) : null,
-              child: Text(t.buy),
+          : null,
+      child: AspectRatio(
+        // Proporción original de tarjeta_skin_tienda.png — no se deforma.
+        aspectRatio: 2172 / 724,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/ui/tarjeta_skin_tienda.png',
+              fit: BoxFit.fill,
             ),
-        ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+              child: Row(
+                children: [
+                  SkinPreview(skin: skin, size: 38),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            RarityDiamond(color: skin.color, size: 14),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                skin.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: woodPlateTextPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (skin.creatureName != null)
+                          Text(
+                            skin.creatureName!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              color: woodPlateTextSecondary,
+                              fontSize: 11,
+                            ),
+                          ),
+                        owned
+                            ? Text(
+                                equipped ? t.equipped : t.owned,
+                                style: GoogleFonts.manrope(
+                                  color: woodPlateTextSecondary,
+                                  fontSize: 12,
+                                ),
+                              )
+                            : CoinLabel(
+                                amount: skin.priceCoins!,
+                                iconSize: 13,
+                                plated: false,
+                                style: GoogleFonts.manrope(
+                                  color: woodPlateTextSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (equipped)
+                    Semantics(
+                      label: t.equipped,
+                      child: Image.asset(
+                        'assets/images/ui/indicador_skin_equipada.png',
+                        width: 40,
+                        height: 40,
+                      ),
+                    )
+                  else if (owned)
+                    SecondaryButton(
+                      label: t.equip,
+                      width: 104,
+                      onPressed: () => app.equipSkin(skin.id),
+                    )
+                  else
+                    PurchaseButton(
+                      label: t.buy,
+                      width: 104,
+                      onPressed: afford
+                          ? () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final confirmed = await showConfirmationPanel(
+                                context,
+                                title: t.confirmPurchaseTitle,
+                                description: t.confirmPurchaseSkinMessage(
+                                  skin.name,
+                                  skin.priceCoins!,
+                                ),
+                                confirmLabel: t.buy,
+                                cancelLabel: t.cancel,
+                              );
+                              if (!confirmed) return;
+                              final ok = await app.purchaseSkin(skin.id);
+                              if (ok) {
+                                showWoodSnackBar(
+                                  messenger,
+                                  message: t.skinPurchasedSnackbar(skin.name),
+                                  iconAsset: 'assets/images/ui/icono_exito.png',
+                                );
+                              } else {
+                                showWoodSnackBar(
+                                  messenger,
+                                  message: t.purchaseFailedSnackbar,
+                                  iconAsset: 'assets/images/ui/icono_error.png',
+                                );
+                              }
+                            }
+                          : null,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -166,13 +245,7 @@ class _ShopPerkTile extends StatelessWidget {
     final afford = save.coins >= perk.priceCoins;
     final name = PerkLabels.name(context, perk.id);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.bg1,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.lane, width: 1),
-      ),
+    return WoodPanel(
       child: Row(
         children: [
           Expanded(
@@ -199,7 +272,8 @@ class _ShopPerkTile extends StatelessWidget {
                 else
                   CoinLabel(
                     amount: perk.priceCoins,
-                    iconSize: 13,
+                    iconSize: 14,
+                    plated: false,
                     style: GoogleFonts.manrope(color: colors.text1, fontSize: 13),
                   ),
               ],
@@ -208,19 +282,27 @@ class _ShopPerkTile extends StatelessWidget {
           if (owned)
             Icon(Icons.check_circle_rounded, color: colors.success)
           else
-            FilledButton(
+            PurchaseButton(
+              label: t.buy,
               onPressed: afford
                   ? () async {
                       final messenger = ScaffoldMessenger.of(context);
                       final ok = await app.purchasePerk(perk.id);
                       if (ok) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text(t.perkPurchasedSnackbar(name))),
+                        showWoodSnackBar(
+                          messenger,
+                          message: t.perkPurchasedSnackbar(name),
+                          iconAsset: 'assets/images/ui/icono_exito.png',
+                        );
+                      } else {
+                        showWoodSnackBar(
+                          messenger,
+                          message: t.purchaseFailedSnackbar,
+                          iconAsset: 'assets/images/ui/icono_error.png',
                         );
                       }
                     }
                   : null,
-              child: Text(t.buy),
             ),
         ],
       ),

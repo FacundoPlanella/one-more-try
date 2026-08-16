@@ -51,26 +51,14 @@ class _OneMoreTryAppState extends State<OneMoreTryApp> with WidgetsBindingObserv
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppController>();
-    final mode = app.ready ? app.save.themeMode : 'dark';
-
-    ThemeMode themeMode;
-    switch (mode) {
-      case 'light':
-        themeMode = ThemeMode.light;
-      case 'system':
-        themeMode = ThemeMode.system;
-      default:
-        themeMode = ThemeMode.dark;
-    }
-
     final languageCode = app.ready ? app.save.languageCode : 'en';
 
     return MaterialApp(
       title: GameConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: themeMode,
+      // Único tema soportado — no hay claro/sistema para elegir.
+      theme: AppTheme.dark(),
+      themeMode: ThemeMode.dark,
       locale: Locale(languageCode),
       localizationsDelegates: const [
         AppLocalizations.delegate,
