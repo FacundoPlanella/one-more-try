@@ -52,3 +52,7 @@ app.*.map.json
 *.keystore
 .env
 .env.*
+
+# Desktop/web scaffolding kept only for local testing — not a shipped platform
+/web/
+/windows/
