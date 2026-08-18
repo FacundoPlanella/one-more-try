@@ -1,7 +1,7 @@
 name: one_more_try
 description: "One more try. — casual one-tap endless lane game (offline, banner ads only)."
 publish_to: 'none'
-version: 1.0.1+10
+version: 1.0.1+11
 
 environment:
   sdk: ^3.12.2
@@ -20,6 +20,7 @@ dependencies:
   in_app_review: ^2.0.12
   flutter_localizations:
     sdk: flutter
+  intl: ^0.20.2
   share_plus: ^13.3.0
 
 dev_dependencies:
@@ -45,6 +46,7 @@ flutter:
     - assets/audio/sfx/die.wav
     - assets/audio/sfx/best.wav
     - assets/branding/app_icon.png
+    - assets/branding/logo_one_more_try.png
     - assets/images/creatures/players/
     - assets/images/ui/
     - assets/images/backgrounds/

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/responsive/breakpoints.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/progression/progression_service.dart';
 import '../../l10n/generated/app_localizations.dart';
@@ -25,29 +26,53 @@ class HomeScreen extends StatelessWidget {
     final save = app.save;
     final mission = ProgressionService.currentMission(save);
     final t = AppLocalizations.of(context);
+    final d = context.responsive;
 
     return BannerScaffold(
-      child: SafeArea(
-        bottom: false,
+      background: const Stack(
+        children: [
+          Positioned.fill(
+            child: ScreenBackground(
+              'assets/images/backgrounds/fondo_menu_principal.png',
+            ),
+          ),
+          Positioned.fill(child: ColoredBox(color: Color(0x1F000000))),
+        ],
+      ),
+      child: ClipRect(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
+          padding: EdgeInsets.symmetric(horizontal: d.horizontalMargin * 0.4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // En una ventana ancha y baja (Edge maximizado, landscape) la
+              // UI escalada por ancho no entra en alto: el Column reventaba
+              // 100+ px. Se achica el bloque entero, sin scroll en Inicio.
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.center,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CoinLabel(
-                    amount: save.coins,
-                    iconSize: 18,
-                    width: 148,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: woodPlateTextPrimary,
+                  Flexible(
+                    child: CoinLabel(
+                      amount: save.coins,
+                      iconSize: d.scaledSize(18, min: 18),
+                      width: d.scaledSize(148, min: 148),
+                      style: GoogleFonts.outfit(
+                        fontSize: d.scaledFont(16, min: 16),
+                        fontWeight: FontWeight.w700,
+                        color: woodPlateTextPrimary,
+                      ),
                     ),
                   ),
                   AssetIconButton(
                     asset: 'assets/images/ui/boton_config.png',
+                    size: d.topButtonSize,
                     tooltip: t.settingsTitle,
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(
@@ -57,27 +82,30 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              const Spacer(flex: 2),
-              const BrandTitle(),
-              const SizedBox(height: 10),
+              const BrandLogo(),
+              SizedBox(height: d.spacing),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const TrophyIcon(size: 18),
+                  TrophyIcon(size: d.scaledSize(18, min: 18)),
                   const SizedBox(width: 6),
                   Text(
                     t.bestScoreLabel(save.bestScore),
                     style: GoogleFonts.manrope(
-                      fontSize: 18,
+                      fontSize: d.scaledFont(16, min: 14),
                       color: colors.text1,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              RankBadge(text: TitleLabel.resolve(context, save.titleId)),
-              const Spacer(flex: 2),
+              SizedBox(height: d.spacing * 0.6),
+              RankBadge(
+                text: TitleLabel.resolve(context, save.titleId),
+                width: d.scaledSize(210, min: 210),
+                fontSize: d.scaledFont(15, min: 14),
+              ),
+              SizedBox(height: d.spacing * 1.2),
               PrimaryButton(
                 label: t.play,
                 onPressed: () {
@@ -88,57 +116,84 @@ class HomeScreen extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 18),
+              SizedBox(height: d.spacing),
+              // Cada acceso rápido toma una porción igual de la fila: con la
+              // tipografía y el área táctil escaladas en tablet, cuatro
+              // etiquetas a tamaño natural sumaban más que el ancho disponible.
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _QuickAccessTile(
-                    iconAsset: 'assets/images/ui/icono_skins.png',
-                    label: t.linkSkins,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SkinsScreen(),
+                  Expanded(
+                    child: _QuickAccessTile(
+                      iconAsset: 'assets/images/ui/icono_skins.png',
+                      label: t.linkSkins,
+                      iconSize: d.navIconSize,
+                      fontSize: d.navFontSize,
+                      tapSize: d.navTapSize,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const SkinsScreen(),
+                        ),
                       ),
                     ),
                   ),
-                  _QuickAccessTile(
-                    iconAsset: 'assets/images/ui/icono_tienda.png',
-                    label: t.linkShop,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const ShopScreen(),
+                  Expanded(
+                    child: _QuickAccessTile(
+                      iconAsset: 'assets/images/ui/icono_tienda.png',
+                      label: t.linkShop,
+                      iconSize: d.navIconSize,
+                      fontSize: d.navFontSize,
+                      tapSize: d.navTapSize,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ShopScreen(),
+                        ),
                       ),
                     ),
                   ),
-                  _QuickAccessTile(
-                    iconAsset: 'assets/images/ui/icono_estadisticas.png',
-                    label: t.linkStats,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const StatsScreen(),
+                  Expanded(
+                    child: _QuickAccessTile(
+                      iconAsset: 'assets/images/ui/icono_estadisticas.png',
+                      label: t.linkStats,
+                      iconSize: d.navIconSize,
+                      fontSize: d.navFontSize,
+                      tapSize: d.navTapSize,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const StatsScreen(),
+                        ),
                       ),
                     ),
                   ),
-                  _QuickAccessTile(
-                    iconAsset: 'assets/images/ui/icono_medallas.png',
-                    label: t.linkMedals,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const MedalsScreen(),
+                  Expanded(
+                    child: _QuickAccessTile(
+                      iconAsset: 'assets/images/ui/icono_medallas.png',
+                      label: t.linkMedals,
+                      iconSize: d.navIconSize,
+                      fontSize: d.navFontSize,
+                      tapSize: d.navTapSize,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const MedalsScreen(),
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const Spacer(),
+              SizedBox(height: d.spacing),
               _DailyRow(
                 title: MissionLabels.title(context, mission.id),
                 progress: save.dailyProgress,
                 target: mission.target,
                 done: save.dailyCompleted,
+                fontSize: d.scaledFont(14, min: 13),
               ),
-              const SizedBox(height: 16),
-            ],
+              SizedBox(height: d.spacing),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -146,22 +201,24 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-/// Acceso rápido del Home (Skins/Shop/Stats/Medals): ícono + etiqueta, con
-/// toda la columna como única zona pulsable (no solo el ícono). [iconAsset]
-/// dibuja el PNG propio del rubro (proporción/tamaño intactos); si no hay
-/// asset todavía, cae al ícono de Material genérico con chapa de madera.
 class _QuickAccessTile extends StatelessWidget {
   const _QuickAccessTile({
     this.icon,
     this.iconAsset,
     required this.label,
     required this.onTap,
+    this.iconSize = 32,
+    this.fontSize = 14,
+    this.tapSize = 56,
   }) : assert(icon != null || iconAsset != null);
 
   final IconData? icon;
   final String? iconAsset;
   final String label;
   final VoidCallback onTap;
+  final double iconSize;
+  final double fontSize;
+  final double tapSize;
 
   @override
   Widget build(BuildContext context) {
@@ -169,25 +226,40 @@ class _QuickAccessTile extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (iconAsset != null)
-              Image.asset(iconAsset!, width: 52, height: 52)
-            else
-              IconBadgeButton(icon: icon!, onPressed: onTap, size: 52),
-            const SizedBox(height: 6),
-            Text(
-              label,
-              style: GoogleFonts.manrope(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: colors.text1,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: tapSize, minHeight: tapSize),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            vertical: fontSize * 0.4,
+            horizontal: fontSize * 0.55,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (iconAsset != null)
+                Image.asset(iconAsset!, width: iconSize, height: iconSize)
+              else
+                IconBadgeButton(icon: icon!, onPressed: onTap, size: iconSize),
+              SizedBox(height: fontSize * 0.3),
+              // La etiqueta se achica sola si el idioma la hace más ancha que
+              // el reparto de la fila (chino corto, portugués largo): con la
+              // tipografía escalando en tablet, cuatro etiquetas a tamaño
+              // completo no entraban y la fila desbordaba.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: GoogleFonts.manrope(
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w600,
+                    color: colors.text1,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -200,17 +272,20 @@ class _DailyRow extends StatelessWidget {
     required this.progress,
     required this.target,
     required this.done,
+    this.fontSize = 13,
   });
 
   final String title;
   final int progress;
   final int target;
   final bool done;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.oneColors;
     final t = AppLocalizations.of(context);
+    final d = context.responsive;
     final p = (progress / target).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,8 +295,8 @@ class _DailyRow extends StatelessWidget {
           children: [
             Image.asset(
               'assets/images/ui/icono_mision_diaria.png',
-              width: 18,
-              height: 18,
+              width: fontSize + 6,
+              height: fontSize + 6,
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -229,39 +304,31 @@ class _DailyRow extends StatelessWidget {
                 done ? t.dailyComplete : t.dailyLabel(title),
                 style: GoogleFonts.manrope(
                   color: colors.text1,
-                  fontSize: 13,
+                  fontSize: fontSize,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        _WoodProgressBar(value: p, done: done),
+        SizedBox(height: d.spacing * 0.5),
+        _WoodProgressBar(value: p, height: d.scaledSize(28, min: 24)),
       ],
     );
   }
 }
 
-/// Barra de progreso de la misión diaria — barra_progreso_base.png como
-/// marco fijo (proporción original, sin deformar); el relleno dinámico se
-/// dibuja arriba, acotado al canal oscuro medido en el PNG (fracciones del
-/// canvas 2172×724) para no pisar nunca el borde dorado. El ancho sigue al
-/// espacio disponible vía [AspectRatio], así que se adapta solo a
-/// cualquier resolución.
+/// Barra de progreso a altura lógica. El PNG nativo 2172×724 no define el
+/// alto visual: se dibuja con fill dentro de un alto en dp.
 class _WoodProgressBar extends StatelessWidget {
-  const _WoodProgressBar({required this.value, required this.done});
+  const _WoodProgressBar({required this.value, required this.height});
 
   final double value;
-  final bool done;
+  final double height;
 
   static const _channelLeft = 0.115;
   static const _channelTop = 0.44;
   static const _channelBottom = 0.45;
-
-  // Medidas nativas de barra_progreso_relleno.png (canvas 2103×748): bbox
-  // del contenido opaco (la píldora verde), para escalarlo por altura sin
-  // deformarlo y recortar el padding transparente que trae el PNG.
   static const _fillCanvasW = 2103.0;
   static const _fillCanvasH = 748.0;
   static const _fillContentLeft = 166.0;
@@ -271,8 +338,9 @@ class _WoodProgressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 2172 / 724,
+    return SizedBox(
+      height: height,
+      width: double.infinity,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final w = constraints.maxWidth;
@@ -280,11 +348,6 @@ class _WoodProgressBar extends StatelessWidget {
           final channelLeft = w * _channelLeft;
           final channelTop = h * _channelTop;
           final channelHeight = h * (1 - _channelTop - _channelBottom);
-
-          // Escala uniforme (misma en X e Y): la altura del contenido del
-          // relleno pasa a medir justo channelHeight, sin deformarlo. Con
-          // la proporción real del asset esto ya da un ancho natural menor
-          // al canal completo, así que nunca lo supera.
           final scale = channelHeight / _fillContentH;
           final contentWidth = _fillContentW * scale;
           final fullImgWidth = _fillCanvasW * scale;
@@ -296,6 +359,7 @@ class _WoodProgressBar extends StatelessWidget {
                 child: Image.asset(
                   'assets/images/ui/barra_progreso_base.png',
                   fit: BoxFit.fill,
+                  filterQuality: FilterQuality.none,
                 ),
               ),
               Positioned(
@@ -305,9 +369,6 @@ class _WoodProgressBar extends StatelessWidget {
                 child: ClipRect(
                   child: Align(
                     alignment: Alignment.centerLeft,
-                    // Recorte nativo: revela de izquierda a derecha según
-                    // el % actual, nunca más que el ancho natural del
-                    // relleno (que ya entra en el canal por diseño).
                     widthFactor: value.clamp(0.0, 1.0),
                     child: SizedBox(
                       width: contentWidth,
@@ -324,6 +385,7 @@ class _WoodProgressBar extends StatelessWidget {
                               child: Image.asset(
                                 'assets/images/ui/barra_progreso_relleno.png',
                                 fit: BoxFit.fill,
+                                filterQuality: FilterQuality.none,
                               ),
                             ),
                           ],

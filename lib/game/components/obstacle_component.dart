@@ -16,8 +16,10 @@ class ObstacleRowComponent extends PositionComponent {
     required this.laneWidth,
     required this.originX,
     required this.rowHeight,
+    required this.collisionHeight,
     required this.color,
-    required this.screenWidth,
+    required this.centerX,
+    required this.horizonSpread,
     required this.playerY,
   }) : super(priority: 0);
 
@@ -30,9 +32,14 @@ class ObstacleRowComponent extends PositionComponent {
   final int mask;
   double laneWidth;
   double originX;
-  final double rowHeight;
+  double rowHeight;
+  double collisionHeight;
   Color color;
-  double screenWidth;
+
+  /// Punto de fuga horizontal del fondo y cuánto se angosta el camino en el
+  /// borde superior visible (ver `ForestBackgroundLanes`).
+  double centerX;
+  double horizonSpread;
   double playerY;
 
   List<Image> _frames = const [];
@@ -65,7 +72,7 @@ class ObstacleRowComponent extends PositionComponent {
     final image = frames.isEmpty
         ? null
         : frames[(_animTime / _frameDuration).floor() % frames.length];
-    final h = rowHeight * 0.52;
+    final h = rowHeight * GameConstants.obstacleHitHeightFactor;
     final rowY = position.y;
     for (var lane = 0; lane < GameConstants.laneCount; lane++) {
       if (!LaneMask.isBlocked(mask, lane)) continue;
@@ -75,14 +82,16 @@ class ObstacleRowComponent extends PositionComponent {
             flatX: cellLeftFlat,
             y: rowY,
             playerY: playerY,
-            screenWidth: screenWidth,
+            centerX: centerX,
+            horizonSpread: horizonSpread,
           ) -
           position.x;
       final right = LanePerspective.apply(
             flatX: cellRightFlat,
             y: rowY,
             playerY: playerY,
-            screenWidth: screenWidth,
+            centerX: centerX,
+            horizonSpread: horizonSpread,
           ) -
           position.x;
       final rect = Rect.fromLTWH(left, -h / 2, right - left, h);
@@ -128,7 +137,8 @@ class ObstacleRowComponent extends PositionComponent {
   }) {
     if (!LaneMask.isBlocked(mask, playerLane)) return false;
     final dy = (position.y - playerY).abs();
-    final half = rowHeight * 0.52 / 2;
+    final half =
+        collisionHeight * GameConstants.obstacleHitHeightFactor / 2;
     return dy < half + playerRadius * (1 - GameConstants.hitboxForgiveness);
   }
 }
@@ -140,6 +150,7 @@ class OrbComponent extends PositionComponent {
     required this.laneWidth,
     required this.originX,
     required this.color,
+    this.sizeScale = 1.0,
   }) : super(priority: 1);
 
   final PickupType type;
@@ -148,6 +159,10 @@ class OrbComponent extends PositionComponent {
   double originX;
   final Color color;
   bool collected = false;
+
+  /// Mismo factor que `OneGame._sizeScale`, para que el tamaño dibujado
+  /// guarde proporción con jugador/obstáculos en cualquier resolución.
+  double sizeScale;
 
   /// true mientras el imán la está atrayendo hacia el jugador (animación de
   /// atracción real, no solo un radio de recolección más grande).
@@ -173,7 +188,8 @@ class OrbComponent extends PositionComponent {
   /// Recalcula el ancho de carril tras un resize, preservando la Y —que
   /// representa el progreso de scroll, no la posición horizontal—. La X
   /// definitiva la fija [applyPerspective], que el caller debe invocar
-  /// después (necesita playerY/screenWidth, que este componente no conoce).
+  /// después (necesita playerY y la geometría del fondo, que este componente
+  /// no conoce).
   void updateLaneWidth(double newLaneWidth, double newOriginX) {
     laneWidth = newLaneWidth;
     originX = newOriginX;
@@ -182,12 +198,13 @@ class OrbComponent extends PositionComponent {
   /// Ajusta la X visible para que la moneda siga el camino en perspectiva
   /// del fondo en vez de una grilla de carriles recta. Se llama cada frame
   /// mientras no está siendo atraída por el imán (ver [attracting]).
-  void applyPerspective(double playerY, double screenWidth) {
+  void applyPerspective(double playerY, double centerX, double horizonSpread) {
     position.x = LanePerspective.apply(
       flatX: flatX,
       y: position.y,
       playerY: playerY,
-      screenWidth: screenWidth,
+      centerX: centerX,
+      horizonSpread: horizonSpread,
     );
   }
 
@@ -245,6 +262,12 @@ class OrbComponent extends PositionComponent {
   void render(Canvas canvas) {
     if (collected) return;
 
+    // Escala uniforme (ver [sizeScale]) en vez de multiplicar cada radio a
+    // mano: mantiene el ícono, el glow y el glyph proporcionados entre sí
+    // sin duplicar la lógica de escalado en cada `drawCircle`.
+    canvas.save();
+    canvas.scale(sizeScale);
+
     final icon = _icon;
     if (icon != null) {
       canvas.drawCircle(
@@ -259,6 +282,7 @@ class OrbComponent extends PositionComponent {
         anchor: Anchor.center,
         overridePaint: Paint()..filterQuality = FilterQuality.none,
       );
+      canvas.restore();
       return;
     }
 
@@ -281,6 +305,7 @@ class OrbComponent extends PositionComponent {
         ..color = color.withValues(alpha: 0.4),
     );
     _renderGlyph(canvas);
+    canvas.restore();
   }
 
   /// Ícono simple por tipo, sin depender de sprites externos.

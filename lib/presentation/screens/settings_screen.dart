@@ -6,6 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/game_constants.dart';
+import '../../core/responsive/breakpoints.dart';
+import '../../core/responsive/panel_metrics.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../controllers/app_controller.dart';
@@ -34,7 +36,12 @@ class SettingsScreen extends StatelessWidget {
         title: Text(t.settingsTitle),
       ),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          context.responsive.listBottomPadding,
+        ),
         children: [
           _SettingsRow(
             iconAsset: 'assets/images/ui/icono_musica.png',
@@ -54,14 +61,21 @@ class SettingsScreen extends StatelessWidget {
             iconAsset: 'assets/images/ui/icono_vibracion.png',
             label: t.haptics,
             onTap: () => app.setHaptics(!save.haptics),
-            trailing: _RowToggle(value: save.haptics, onChanged: app.setHaptics),
+            trailing: _RowToggle(
+              value: save.haptics,
+              onChanged: app.setHaptics,
+            ),
           ),
           const SizedBox(height: 10),
           _SettingsRow(
             icon: Icons.accessibility_new_rounded,
             label: t.reduceMotion,
             onTap: () => app.setReduceMotion(!save.reduceMotion),
-            trailing: _RowSwitch(
+            // Mismo control ilustrado que Música/Sonido/Vibración (antes
+            // usaba el `Switch` de Material sin estilizar: mismo dato
+            // booleano, dos controles visual y táctilmente distintos en la
+            // misma pantalla).
+            trailing: _RowToggle(
               value: save.reduceMotion,
               onChanged: app.setReduceMotion,
             ),
@@ -246,80 +260,106 @@ class _LanguagePanelState extends State<_LanguagePanel> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 340, maxHeight: 480),
-          child: AspectRatio(
-            // Proporción original de panel_selector_idioma.png — no se
-            // deforma.
-            aspectRatio: 1086 / 1448,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  'assets/images/ui/panel_selector_idioma.png',
-                  fit: BoxFit.fill,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 34, 22, 26),
-                  child: Column(
-                    children: [
-                      Padding(
-                        // Deja libre, a la derecha, el margen que ocupa el
-                        // botón de cierre superpuesto.
-                        padding: const EdgeInsets.only(right: 34),
-                        child: Text(
-                          t.language,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: woodPlateTextPrimary,
-                            shadows: const [
-                              Shadow(
-                                color: Color(0xCC1B0F06),
-                                offset: Offset(0, 2),
-                                blurRadius: 3,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Flexible(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              for (final option in widget.options)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: _IllustratedOptionRow(
-                                    asset:
-                                        'assets/images/ui/opcion_selector_idioma.png',
-                                    label: option.$2,
-                                    selected: option.$1 == widget.current,
-                                    onTap: _selecting
-                                        ? null
-                                        : () => _select(option.$1),
+        // maxWidth/maxHeight son techos para pantallas grandes, no un
+        // tamaño fijo: en una pantalla chica o baja (o con fuente de
+        // sistema agrandada), `constraints` ya viene acotado por el
+        // espacio real disponible tras `insetPadding`, así que topar ahí
+        // en vez de en el valor fijo evita que el panel se recorte o se
+        // desborde. El título es fijo y la lista de idiomas ya scrollea
+        // (`Flexible` + `SingleChildScrollView` más abajo).
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const aspectRatio = 1086 / 1448;
+            final panel = PanelMetrics.resolve(
+              context,
+              constraints: constraints,
+              designWidth: 340,
+              designHeight: 480,
+              aspectRatio: aspectRatio,
+            );
+            final s = panel.scale;
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: panel.maxWidth,
+                maxHeight: panel.maxHeight,
+              ),
+              child: AspectRatio(
+                // Proporción original de panel_selector_idioma.png — no se
+                // deforma.
+                aspectRatio: aspectRatio,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      'assets/images/ui/panel_selector_idioma.png',
+                      fit: BoxFit.fill,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(22 * s, 34 * s, 22 * s, 26 * s),
+                      child: Column(
+                        children: [
+                          Padding(
+                            // Deja libre, a la derecha, el margen que ocupa
+                            // el botón de cierre superpuesto.
+                            padding: EdgeInsets.only(right: 34 * s),
+                            child: Text(
+                              t.language,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.outfit(
+                                fontSize: 20 * s,
+                                fontWeight: FontWeight.w800,
+                                color: woodPlateTextPrimary,
+                                shadows: const [
+                                  Shadow(
+                                    color: Color(0xCC1B0F06),
+                                    offset: Offset(0, 2),
+                                    blurRadius: 3,
                                   ),
-                                ),
-                            ],
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                          SizedBox(height: 14 * s),
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  for (final option in widget.options)
+                                    Padding(
+                                      padding: EdgeInsets.only(bottom: 8 * s),
+                                      child: _IllustratedOptionRow(
+                                        asset:
+                                            'assets/images/ui/opcion_selector_idioma.png',
+                                        label: option.$2,
+                                        scale: s,
+                                        selected: option.$1 == widget.current,
+                                        onTap: _selecting
+                                            ? null
+                                            : () => _select(option.$1),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Positioned(
+                      top: 14 * s,
+                      right: 14 * s,
+                      child: PanelCloseButton(
+                        tooltip: t.back,
+                        tapSize: 44 * s,
+                        iconSize: 30 * s,
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ),
+                  ],
                 ),
-                Positioned(
-                  top: 14,
-                  right: 14,
-                  child: PanelCloseButton(
-                    tooltip: t.back,
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -332,12 +372,16 @@ class _IllustratedOptionRow extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.scale = 1,
   });
 
   final String asset;
   final String label;
   final bool selected;
   final VoidCallback? onTap;
+
+  /// Escala del panel que la contiene (ver [PanelMetrics.scale]).
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +395,7 @@ class _IllustratedOptionRow extends StatelessWidget {
           children: [
             Positioned.fill(child: Image.asset(asset, fit: BoxFit.fill)),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: 24 * scale),
               child: Row(
                 children: [
                   Expanded(
@@ -360,15 +404,15 @@ class _IllustratedOptionRow extends StatelessWidget {
                       style: GoogleFonts.manrope(
                         color: woodPlateTextPrimary,
                         fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                        fontSize: 16 * scale,
                       ),
                     ),
                   ),
                   if (selected)
                     Image.asset(
                       'assets/images/ui/marca_seleccion.png',
-                      width: 24,
-                      height: 24,
+                      width: 24 * scale,
+                      height: 24 * scale,
                     ),
                 ],
               ),
@@ -658,11 +702,12 @@ class _ContactSupportRowState extends State<_ContactSupportRow> {
     setState(() => _busy = true);
     try {
       final messenger = ScaffoldMessenger.of(context);
+      final t = AppLocalizations.of(context);
       final uri = Uri(
         scheme: 'mailto',
         path: GameConstants.supportEmail,
         queryParameters: {
-          'subject': '${GameConstants.appName} — feedback',
+          'subject': t.contactSupportEmailSubject(GameConstants.appName),
         },
       );
       final opened = await launchUrl(uri);
@@ -840,27 +885,6 @@ class _RowToggle extends StatelessWidget {
               : 'assets/images/ui/interruptor_desactivado.png',
           fit: BoxFit.fill,
         ),
-      ),
-    );
-  }
-}
-
-class _RowSwitch extends StatelessWidget {
-  const _RowSwitch({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.oneColors;
-    return Transform.scale(
-      scale: 0.85,
-      child: Switch(
-        value: value,
-        activeThumbColor: colors.accent,
-        activeTrackColor: colors.accent.withValues(alpha: 0.35),
-        onChanged: onChanged,
       ),
     );
   }

@@ -33,6 +33,8 @@
   "rateAppSubtitle": "喜欢这个游戏吗？给我们留个评价吧",
   "contactSupport": "联系与反馈",
   "contactSupportSubtitle": "发送建议或反馈问题",
+  "contactSupportEmailSubject": "{appName} — 反馈",
+  "@contactSupportEmailSubject": { "placeholders": { "appName": { "type": "String" } } },
   "gotIt": "知道了",
 
   "newBest": "新纪录",
@@ -55,6 +57,7 @@
   "unlockHintScore": "最高分 ≥ {n}",
   "unlockHintGames": "{n} 局游戏",
   "unlockHintDaily": "{n} 个每日任务",
+  "unlockHintShop": "可在商店获取",
 
   "shopTitle": "商店",
   "sectionSkins": "皮肤",

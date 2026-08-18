@@ -18,15 +18,26 @@ class PlayerComponent extends PositionComponent {
   double laneWidth = 0;
   double originX = 0;
 
-  static const double _spriteSize = 40;
+  /// Escala aplicada a radio/sprite/trail para que el jugador guarde
+  /// siempre la misma proporción contra el ancho de carril real (ver
+  /// `OneGame._sizeScale`) en vez de un tamaño fijo en píxeles.
+  double sizeScale = 1.0;
+
+  static const double _baseSpriteSize = 40;
 
   void cycleLane() {
     lane = (lane + 1) % GameConstants.laneCount;
   }
 
-  void layout({required double laneWidth, required double originX, required double y}) {
+  void layout({
+    required double laneWidth,
+    required double originX,
+    required double y,
+    double? sizeScale,
+  }) {
     this.laneWidth = laneWidth;
     this.originX = originX;
+    if (sizeScale != null) this.sizeScale = sizeScale;
     position.y = y;
     _snapX();
   }
@@ -86,7 +97,8 @@ class PlayerComponent extends PositionComponent {
 
   @override
   void render(Canvas canvas) {
-    final r = GameConstants.playerRadius;
+    final r = GameConstants.playerRadius * sizeScale;
+    final spriteSize = _baseSpriteSize * sizeScale;
 
     for (var i = _trail.length - 1; i >= 0; i--) {
       final t = 1 - i / _trail.length;
@@ -112,15 +124,15 @@ class PlayerComponent extends PositionComponent {
         canvas.saveLayer(
           Rect.fromCenter(
             center: Offset.zero,
-            width: _spriteSize,
-            height: _spriteSize,
+            width: spriteSize,
+            height: spriteSize,
           ),
           Paint()..color = const Color(0x8CFFFFFF),
         );
       }
       sprite.render(
         canvas,
-        size: Vector2.all(_spriteSize),
+        size: Vector2.all(spriteSize),
         anchor: Anchor.center,
         overridePaint: Paint()..filterQuality = FilterQuality.none,
       );

@@ -157,6 +157,13 @@ class PerkLabels {
 class SkinUnlockHint {
   static String resolve(BuildContext context, SkinDef skin) {
     final t = AppLocalizations.of(context);
+    // Las skins de Tienda no tienen criterio de progreso (unlockBestScore/
+    // unlockGamesPlayed/unlockDailyStreak son todos null) — sin este caso,
+    // caían en el fallback `t.unlocked` ("Unlocked") pese a mostrarse junto
+    // al candado de "bloqueada" en SkinsScreen, un estado contradictorio.
+    if (skin.isShopExclusive) {
+      return t.unlockHintShop;
+    }
     if (skin.unlockBestScore != null) {
       return t.unlockHintScore(skin.unlockBestScore!);
     }

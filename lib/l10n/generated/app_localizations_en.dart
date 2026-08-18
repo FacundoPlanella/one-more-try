@@ -103,6 +103,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contactSupportSubtitle => 'Send a suggestion or report a bug';
 
   @override
+  String contactSupportEmailSubject(String appName) {
+    return '$appName — feedback';
+  }
+
+  @override
   String get gotIt => 'Got it';
 
   @override
@@ -169,6 +174,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String unlockHintDaily(int n) {
     return '$n daily missions';
   }
+
+  @override
+  String get unlockHintShop => 'Available in Shop';
 
   @override
   String get shopTitle => 'Shop';

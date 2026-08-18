@@ -15,6 +15,23 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
+  // La app apunta a targetSdk con edge-to-edge forzado por el SO: sin esto,
+  // Android pinta la barra de estado/navegación con su estilo por defecto
+  // en vez de fundirla con el tema oscuro, dejando una franja visualmente
+  // ajena al fondo de la app. Los widgets ya resuelven el espacio real vía
+  // SafeArea; esto solo hace que las barras del sistema se vean coherentes
+  // con el único tema (oscuro) que soporta la app.
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarDividerColor: Colors.transparent,
+    ),
+  );
 
   final prefs = await SharedPreferences.getInstance();
   final saveRepository = SaveRepository(prefs);
@@ -28,12 +45,16 @@ Future<void> main() async {
     haptics: haptics,
   );
 
-  // Init en paralelo: el splash espera `ready`.
+  // Init en paralelo: el splash espera `ready`. El banner se carga sin
+  // bloquear esa cadena — si initialize()/loadBanner() tardan o fallan a
+  // nivel de canal nativo, appController.init() debe seguir corriendo o
+  // el splash queda girando para siempre (SplashScreen._go() no tiene
+  // timeout, solo espera `app.ready`).
   // ignore: unawaited_futures
   () async {
     await audio.init();
-    await ads.initialize();
-    await ads.loadBanner();
+    // ignore: unawaited_futures
+    ads.initialize().then((_) => ads.loadBanner());
     await appController.init();
     await audio.playMusic();
   }();

@@ -15,6 +15,7 @@ import '../generation/segment.dart';
 import '../generation/segment_generator.dart';
 import 'components/obstacle_component.dart';
 import 'components/player_component.dart';
+import 'forest_background_lanes.dart';
 import 'lane_perspective.dart';
 
 enum OneGameState { playing, dying, dead }
@@ -85,12 +86,12 @@ class OneGame extends FlameGame with TapCallbacks {
   ui.Image? _bgImage;
 
   /// true si la última fila generada tenía monedas de racha: hace que la
-  /// próxima fila se dispare mucho más cerca (ver [_coinTrailRowSpacing]) en
+  /// próxima fila se dispare mucho más cerca (ver
+  /// [GameConstants.coinTrailRowSpacing]) en
   /// vez de esperar el gap normal entre obstáculos, así el patrón se ve
   /// como una línea/cluster conectado en pantalla y no filas sueltas a
   /// cientos de píxeles de distancia.
   bool _lastSpawnWasCoinTrail = false;
-  static const double _coinTrailRowSpacing = 110; // px entre filas de racha
 
   /// Fondo: el matiz rota con el score mientras saturación y luminosidad se
   /// mantienen fijas, así el contraste contra obstáculos/carriles no cambia
@@ -104,9 +105,89 @@ class OneGame extends FlameGame with TapCallbacks {
   final List<ObstacleRowComponent> _obstacles = [];
   final List<OrbComponent> _orbs = [];
 
-  double get _laneWidth => size.x / GameConstants.laneCount;
-  double get _originX => 0;
-  double get _rowHeight => 56;
+  /// Techo del área de carriles, en dp lógicos. El canvas sigue a pantalla
+  /// completa (bosque a los costados). Lo fija `GameScreen` según breakpoint.
+  double maxPlayableWidth = double.infinity;
+
+  void setPlayableMaxWidth(double value) {
+    if (maxPlayableWidth == value) return;
+    maxPlayableWidth = value;
+    if (isLoaded) onGameResize(size);
+  }
+
+  double get playableWidth {
+    final cap = maxPlayableWidth;
+    if (cap.isInfinite) return size.x;
+    return size.x < cap ? size.x : cap;
+  }
+
+  /// Piso del tamaño visual (jugador, obstáculos, monedas y poderes). Lo
+  /// fija `GameScreen`: 1 en celular, 2 en tablet. No se multiplica otra
+  /// vez por el ancho de carril. No toca las colisiones.
+  double spriteScale = 1;
+
+  void setSpriteScale(double value) {
+    if (spriteScale == value) return;
+    spriteScale = value;
+    if (isLoaded) onGameResize(size);
+  }
+
+  /// Carriles tomados de los senderos de tierra del fondo. Antes se repartía el
+  /// ancho disponible en tres partes iguales y centradas, así que los carriles
+  /// caían sobre los arbustos del arte en vez de sobre la tierra —y el punto de
+  /// fuga del PNG no está exactamente en el centro—.
+  ({
+    double laneWidth,
+    double originX,
+    double centerX,
+    double horizonSpread,
+  })? get _backgroundLanes {
+    final img = _bgImage;
+    if (img == null || size.x <= 0 || size.y <= 0) return null;
+    return ForestBackgroundLanes.resolve(
+      imageWidth: img.width.toDouble(),
+      imageHeight: img.height.toDouble(),
+      canvas: Size(size.x, size.y),
+      playerY: size.y * GameConstants.playerYFactor,
+      laneCount: GameConstants.laneCount,
+    );
+  }
+
+  /// Centro de convergencia de la perspectiva: el punto de fuga del fondo, no
+  /// el centro geométrico de la pantalla.
+  double get _laneCenterX => _backgroundLanes?.centerX ?? size.x / 2;
+
+  double get _horizonSpread =>
+      _backgroundLanes?.horizonSpread ?? LanePerspective.fallbackHorizonSpread;
+
+  double get _originX =>
+      _backgroundLanes?.originX ?? (size.x - playableWidth) / 2;
+
+  double get _laneWidth =>
+      _backgroundLanes?.laneWidth ?? playableWidth / GameConstants.laneCount;
+
+  /// Hitbox: acotada a la calibración de celular. Independiente de
+  /// [_visualScale] — agrandar sprites no debe cambiar la dificultad ni
+  /// solapar filas de racha.
+  double get _collisionScale =>
+      GameConstants.collisionScaleForLaneWidth(_laneWidth);
+
+  /// Sprite: en celular sigue al carril; en tablet se usa el mayor entre
+  /// la escala del carril y [spriteScale] (x2), nunca el producto.
+  double get _visualScale {
+    final byLane = _laneWidth / GameConstants.referenceLaneWidth;
+    final target = spriteScale <= 1 ? byLane : max(byLane, spriteScale);
+    return target.clamp(
+      GameConstants.minVisualScale,
+      GameConstants.maxVisualScale,
+    );
+  }
+
+  double get _rowHeight => GameConstants.obstacleRowBaseHeight * _visualScale;
+  double get _collisionRowHeight =>
+      GameConstants.obstacleRowBaseHeight * _collisionScale;
+  double get _playerRadius => GameConstants.playerRadius * _collisionScale;
+  double get _visualPlayerRadius => GameConstants.playerRadius * _visualScale;
 
   Color get _currentBg => _bgForScore(score);
   Color get _currentLane =>
@@ -139,6 +220,7 @@ class OneGame extends FlameGame with TapCallbacks {
       laneWidth: _laneWidth,
       originX: _originX,
       y: size.y * GameConstants.playerYFactor,
+      sizeScale: _visualScale,
     );
     _warmupSpawns();
   }
@@ -161,7 +243,9 @@ class OneGame extends FlameGame with TapCallbacks {
     while (elapsed < warmupSeconds) {
       timer += warmupDt;
       final spawnGap =
-          _lastSpawnWasCoinTrail ? _coinTrailRowSpacing / speed0 : gap0;
+          _lastSpawnWasCoinTrail
+              ? GameConstants.coinTrailRowSpacing / speed0
+              : gap0;
       if (timer >= spawnGap) {
         timer = 0;
         // Cuánto ya "recorrió" esta fila entre que se generó (hace
@@ -181,6 +265,7 @@ class OneGame extends FlameGame with TapCallbacks {
       laneWidth: _laneWidth,
       originX: _originX,
       y: size.y * GameConstants.playerYFactor,
+      sizeScale: _visualScale,
     );
     // El motor a veces reporta un tamaño inicial que se corrige un instante
     // después de onLoad(): sin esto, las filas ya generadas quedan ancladas
@@ -189,17 +274,21 @@ class OneGame extends FlameGame with TapCallbacks {
     for (final o in _obstacles) {
       o.laneWidth = _laneWidth;
       o.originX = _originX;
-      o.screenWidth = size.x;
+      o.centerX = _laneCenterX;
+      o.horizonSpread = _horizonSpread;
       o.playerY = player.position.y;
+      o.rowHeight = _rowHeight;
+      o.collisionHeight = _collisionRowHeight;
     }
     for (final o in _orbs) {
+      o.sizeScale = _visualScale;
       // Una moneda que el imán ya está atrayendo dejó su carril a propósito
       // para ir hacia el jugador — reposicionarla acá la manda de vuelta a
       // su carril original y arranca un loop de ida y vuelta con cada
       // resize. Solo reubicamos las que siguen ancladas a su carril.
       if (!o.attracting) {
         o.updateLaneWidth(_laneWidth, _originX);
-        o.applyPerspective(player.position.y, size.x);
+        o.applyPerspective(player.position.y, _laneCenterX, _horizonSpread);
       }
     }
   }
@@ -224,8 +313,10 @@ class OneGame extends FlameGame with TapCallbacks {
         laneWidth: _laneWidth,
         originX: _originX,
         rowHeight: _rowHeight,
+        collisionHeight: _collisionRowHeight,
         color: _currentObstacle,
-        screenWidth: size.x,
+        centerX: _laneCenterX,
+        horizonSpread: _horizonSpread,
         playerY: player.position.y,
       )..position = Vector2(0, y);
       _obstacles.add(row);
@@ -239,8 +330,9 @@ class OneGame extends FlameGame with TapCallbacks {
         laneWidth: _laneWidth,
         originX: _originX,
         color: _colorForPickup(type),
+        sizeScale: _visualScale,
       )..layoutY(y);
-      orb.applyPerspective(player.position.y, size.x);
+      orb.applyPerspective(player.position.y, _laneCenterX, _horizonSpread);
       _orbs.add(orb);
       add(orb);
     }
@@ -251,8 +343,9 @@ class OneGame extends FlameGame with TapCallbacks {
         laneWidth: _laneWidth,
         originX: _originX,
         color: _colorForPickup(PickupType.coin),
+        sizeScale: _visualScale,
       )..layoutY(y);
-      orb.applyPerspective(player.position.y, size.x);
+      orb.applyPerspective(player.position.y, _laneCenterX, _horizonSpread);
       _orbs.add(orb);
       add(orb);
     }
@@ -348,7 +441,7 @@ class OneGame extends FlameGame with TapCallbacks {
         }
       } else {
         orb.position.y += speed * dt;
-        orb.applyPerspective(player.position.y, size.x);
+        orb.applyPerspective(player.position.y, _laneCenterX, _horizonSpread);
       }
     }
 
@@ -356,7 +449,9 @@ class OneGame extends FlameGame with TapCallbacks {
     // Filas de racha se disparan mucho más seguido (distancia fija en vez
     // del gap normal) para que se vean pegadas unas a otras en pantalla.
     final spawnGap =
-        _lastSpawnWasCoinTrail ? _coinTrailRowSpacing / speed : gap;
+        _lastSpawnWasCoinTrail
+        ? GameConstants.coinTrailRowSpacing / speed
+        : gap;
     if (_spawnTimer >= spawnGap) {
       _spawnTimer = 0;
       _lastSpawnWasCoinTrail = _spawnSegment();
@@ -367,7 +462,7 @@ class OneGame extends FlameGame with TapCallbacks {
         playerLane: player.lane,
         playerX: player.position.x,
         playerY: player.position.y,
-        playerRadius: GameConstants.playerRadius,
+        playerRadius: _visualPlayerRadius,
         ignoreLane: orb.attracting,
       )) {
         switch (orb.type) {
@@ -405,7 +500,7 @@ class OneGame extends FlameGame with TapCallbacks {
       if (row.hitsPlayer(
         playerLane: player.lane,
         playerY: player.position.y,
-        playerRadius: GameConstants.playerRadius,
+        playerRadius: _playerRadius,
       )) {
         if (_shieldActive) {
           _shieldActive = false;
@@ -489,18 +584,11 @@ class OneGame extends FlameGame with TapCallbacks {
   /// Recorta [image] para llenar [dst] por completo (equivalente a
   /// BoxFit.cover), igual que hace ObstacleRowComponent con su sprite.
   void _drawImageCover(Canvas canvas, ui.Image image, Rect dst) {
-    final srcW = image.width.toDouble();
-    final srcH = image.height.toDouble();
-    final srcAspect = srcW / srcH;
-    final dstAspect = dst.width / dst.height;
-    final Rect src;
-    if (srcAspect > dstAspect) {
-      final cropW = srcH * dstAspect;
-      src = Rect.fromLTWH((srcW - cropW) / 2, 0, cropW, srcH);
-    } else {
-      final cropH = srcW / dstAspect;
-      src = Rect.fromLTWH(0, (srcH - cropH) / 2, srcW, cropH);
-    }
+    final src = ForestBackgroundLanes.coverSrcRect(
+      srcWidth: image.width.toDouble(),
+      srcHeight: image.height.toDouble(),
+      dst: dst.size,
+    );
     canvas.drawImageRect(image, src, dst, Paint()..filterQuality = FilterQuality.low);
   }
 
@@ -513,19 +601,20 @@ class OneGame extends FlameGame with TapCallbacks {
       ..strokeWidth = 1.4;
     if (!isLoaded) {
       for (var i = 1; i < GameConstants.laneCount; i++) {
-        final x = _laneWidth * i;
+        final x = _originX + _laneWidth * i;
         canvas.drawLine(Offset(x, 0), Offset(x, screen.height), lanePaint);
       }
       return;
     }
     final playerY = player.position.y;
     for (var i = 1; i < GameConstants.laneCount; i++) {
-      final flatX = _laneWidth * i;
+      final flatX = _originX + _laneWidth * i;
       final topX = LanePerspective.apply(
         flatX: flatX,
         y: 0,
         playerY: playerY,
-        screenWidth: screen.width,
+        centerX: _laneCenterX,
+        horizonSpread: _horizonSpread,
       );
       canvas.drawLine(Offset(topX, 0), Offset(flatX, playerY), lanePaint);
       canvas.drawLine(Offset(flatX, playerY), Offset(flatX, screen.height), lanePaint);
@@ -546,23 +635,11 @@ class OneGame extends FlameGame with TapCallbacks {
       );
     }
 
-    if (!reduceMotion && isLoaded) {
-      final a = (sin(_pulse * 2) + 1) * 0.5;
-      canvas.drawCircle(
-        Offset(player.position.x, player.position.y),
-        GameConstants.playerRadius + 8 + a * 3,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..color = accentColor.withValues(alpha: 0.18 + a * 0.12),
-      );
-    }
-
     if (isLoaded && (_shieldActive || _shieldFlashTimer > 0)) {
       final flash = _shieldFlashTimer > 0;
       canvas.drawCircle(
         Offset(player.position.x, player.position.y),
-        GameConstants.playerRadius + (flash ? 10 : 5),
+        _visualPlayerRadius + (flash ? 10 : 5),
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = flash ? 3 : 2
@@ -588,7 +665,7 @@ class OneGame extends FlameGame with TapCallbacks {
     final a = (sin(_pulse * 5) + 1) * 0.5;
     canvas.drawCircle(
       Offset(player.position.x, player.position.y),
-      GameConstants.playerRadius + extraRadius + a * 2,
+      _visualPlayerRadius + extraRadius + a * 2,
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.2

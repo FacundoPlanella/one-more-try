@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/responsive/app_screen.dart';
+import '../../core/responsive/breakpoints.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../controllers/app_controller.dart';
 import '../widgets/common_widgets.dart';
 import 'home_screen.dart';
 
@@ -56,26 +60,61 @@ class _CreditsScreenState extends State<CreditsScreen> {
   Widget build(BuildContext context) {
     final colors = context.oneColors;
     final t = AppLocalizations.of(context);
-    final body = SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-        child: Column(
-          children: [
-            TitlePlate(text: t.creditsHeading, height: 56, fontSize: 24),
-            const SizedBox(height: 28),
-            IgnorePointer(
+    // Para cuando esta pantalla se monta, SplashScreen ya esperó a
+    // `app.ready` — en el flujo normal esto ya está en true. Se lee en
+    // vivo (en vez de asumir que siempre lo está) para que el texto de
+    // "Cargando…" solo aparezca mientras realmente no hay datos, y
+    // desaparezca apenas los haya.
+    final ready = context.watch<AppController>().ready;
+
+    final d = context.responsive;
+    final header = Padding(
+      padding: EdgeInsets.fromLTRB(20, widget.fromSettings ? 8 : 24, 20, 0),
+      child: Column(
+        children: [
+          Center(
+            child: TitlePlate(
+              text: t.creditsHeading,
+              height: d.scaledSize(56, min: 48),
+              fontSize: d.scaledFont(24, min: 20),
+            ),
+          ),
+          SizedBox(height: d.spacing),
+          Center(
+            child: IgnorePointer(
               child: Image.asset(
                 'assets/images/ui/icono_creditos.png',
-                width: 48,
-                height: 48,
+                width: d.scaledSize(48, min: 48),
+                height: d.scaledSize(48, min: 48),
               ),
             ),
-            const SizedBox(height: 20),
-            ContentCard(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              child: Column(
-                children: [
-                  _CreditBlock(
+          ),
+        ],
+      ),
+    );
+
+    return AppScreen(
+      showBanner: false,
+      constrainWidth: true,
+      safeTop: true,
+      background: const ScreenBackground(
+        'assets/images/backgrounds/fondo_pantallas_iniciales.png',
+      ),
+      body: Column(
+        children: [
+          if (widget.fromSettings)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: WoodBackButton(tooltip: t.back),
+            ),
+          header,
+          SizedBox(height: d.spacing),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, d.listBottomPadding + 16),
+              children: [
+                _CreditCard(
+                  child: _CreditBlock(
                     colors: colors,
                     label: t.pixelArtLabel,
                     title: t.philippineMythCreatures,
@@ -84,10 +123,12 @@ class _CreditsScreenState extends State<CreditsScreen> {
                     linkLabel: t.viewOnItch,
                     onViewPack: _openShadePack,
                   ),
-                  const SizedBox(height: 20),
-                  const SectionDivider(),
-                  const SizedBox(height: 12),
-                  _CreditBlock(
+                ),
+                SizedBox(height: d.spacing),
+                const SectionDivider(),
+                SizedBox(height: d.spacing),
+                _CreditCard(
+                  child: _CreditBlock(
                     colors: colors,
                     label: t.uiArtLabel,
                     title: t.superRetroWorldPack,
@@ -96,65 +137,81 @@ class _CreditsScreenState extends State<CreditsScreen> {
                     linkLabel: t.viewOnItch,
                     onViewPack: _openSuperRetroPack,
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 40),
-            Text(
-              t.gameByPlanella,
-              style: GoogleFonts.manrope(
-                fontSize: 13,
-                color: colors.text1,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (!widget.fromSettings)
-              Text(
-                t.loading,
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  color: colors.text1.withValues(alpha: 0.7),
                 ),
-              ),
-          ],
-        ),
+                SizedBox(height: d.spacing * 2),
+                Text(
+                  t.gameByPlanella,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    fontSize: d.scaledFont(13, min: 13),
+                    color: colors.text1,
+                  ),
+                ),
+                if (!widget.fromSettings && !ready) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    t.loading,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: colors.text1.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colors.bg0,
-              Color.lerp(colors.bg0, colors.accent, 0.1)!,
-            ],
+/// Envuelve [ContentCard] con un padding vertical que SIEMPRE despeja la
+/// "tapa" decorativa dorada del panel (dibujada en la propia imagen de
+/// fondo), en vez de un valor fijo.
+///
+/// Esa tapa escala con el ANCHO de la tarjeta, no con su alto — ver
+/// `ContentCard._capH`/`._nativeW` en common_widgets.dart, no expuestos
+/// públicamente, así que se replica acá la misma proporción en vez de
+/// importarlos. Con un padding vertical fijo (24), el título quedaba
+/// dibujado sobre el grabado de la tapa superior y la nota de licencia
+/// sobre el de la tapa inferior — ilegibles por el contraste y el patrón
+/// del grabado — porque una tarjeta con un solo bloque es bastante más
+/// baja que la tarjeta compartida original, y esa tapa (fija en proporción
+/// al ancho) pasa a ocupar una porción mucho mayor del alto total.
+class _CreditCard extends StatelessWidget {
+  const _CreditCard({required this.child});
+
+  final Widget child;
+
+  static const _capFraction = 170.0 / 1096.0;
+  static const _capClearance = 14.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final verticalPadding =
+            constraints.maxWidth * _capFraction + _capClearance;
+        return ContentCard(
+          padding: EdgeInsets.symmetric(
+            vertical: verticalPadding,
+            horizontal: 26,
           ),
-        ),
-        child: Stack(
-          children: [
-            body,
-            if (widget.fromSettings)
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: WoodBackButton(tooltip: t.back),
-                ),
-              ),
-          ],
-        ),
-      ),
+          child: child,
+        );
+      },
     );
   }
 }
 
 /// Un bloque de atribución (label + nombre del pack + autor + nota de
 /// licencia + link) — usado una vez por cada pack de terceros que el juego
-/// usa, para no repetir el layout.
+/// usa, para no repetir el layout. Cada instancia vive en su propio
+/// [_CreditCard] independiente (ver [_CreditsScreenState.build]), así que
+/// se dimensiona sola según su propio contenido sin depender del bloque
+/// vecino.
 class _CreditBlock extends StatelessWidget {
   const _CreditBlock({
     required this.colors,
@@ -176,13 +233,16 @@ class _CreditBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final d = context.responsive;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
+          textAlign: TextAlign.center,
           style: GoogleFonts.manrope(
             color: colors.text1,
-            fontSize: 13,
+            fontSize: d.scaledFont(13, min: 13),
             letterSpacing: 1.2,
           ),
         ),
@@ -191,7 +251,7 @@ class _CreditBlock extends StatelessWidget {
           title,
           textAlign: TextAlign.center,
           style: GoogleFonts.outfit(
-            fontSize: 20,
+            fontSize: d.scaledFont(20, min: 18),
             fontWeight: FontWeight.w700,
             color: colors.text0,
           ),
@@ -199,8 +259,9 @@ class _CreditBlock extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           author,
+          textAlign: TextAlign.center,
           style: GoogleFonts.manrope(
-            fontSize: 16,
+            fontSize: d.scaledFont(16, min: 15),
             color: colors.accent,
             fontWeight: FontWeight.w600,
           ),
@@ -210,7 +271,7 @@ class _CreditBlock extends StatelessWidget {
           note,
           textAlign: TextAlign.center,
           style: GoogleFonts.manrope(
-            fontSize: 13,
+            fontSize: d.scaledFont(13, min: 13),
             color: colors.text1,
           ),
         ),
@@ -220,11 +281,14 @@ class _CreditBlock extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                linkLabel,
-                style: GoogleFonts.manrope(
-                  color: colors.accent,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  linkLabel,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    color: colors.accent,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(width: 6),

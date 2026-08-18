@@ -104,6 +104,11 @@ class AppLocalizationsEs extends AppLocalizations {
       'Mandanos una sugerencia o reportá un bug';
 
   @override
+  String contactSupportEmailSubject(String appName) {
+    return '$appName — feedback';
+  }
+
+  @override
   String get gotIt => 'Entendido';
 
   @override
@@ -170,6 +175,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String unlockHintDaily(int n) {
     return '$n misiones diarias';
   }
+
+  @override
+  String get unlockHintShop => 'Disponible en la Tienda';
 
   @override
   String get shopTitle => 'Tienda';

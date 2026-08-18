@@ -6,20 +6,21 @@
 class LanePerspective {
   LanePerspective._();
 
-  /// Fracción del ancho total que ocupan los carriles en el horizonte
-  /// (y = 0), calibrada a ojo contra lo angosto que se ve el camino en el
-  /// fondo. 1.0 anularía el efecto (carriles siempre a ancho completo).
-  static const double horizonSpread = 0.3;
+  /// Convergencia usada cuando no se conoce la geometría del fondo (imagen sin
+  /// cargar). Con el PNG disponible, el valor real lo calcula
+  /// `ForestBackgroundLanes.resolve` midiendo cuánto se angosta el sendero
+  /// entre el borde superior visible y la fila del jugador.
+  static const double fallbackHorizonSpread = 0.3;
 
   static double apply({
     required double flatX,
     required double y,
     required double playerY,
-    required double screenWidth,
+    required double centerX,
+    double horizonSpread = fallbackHorizonSpread,
   }) {
-    final center = screenWidth / 2;
     final t = playerY <= 0 ? 1.0 : (y / playerY).clamp(0.0, 1.0);
     final spread = horizonSpread + (1.0 - horizonSpread) * t;
-    return center + (flatX - center) * spread;
+    return centerX + (flatX - centerX) * spread;
   }
 }

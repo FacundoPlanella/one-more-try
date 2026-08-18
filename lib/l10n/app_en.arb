@@ -35,6 +35,8 @@
   "rateAppSubtitle": "Enjoying the game? Leave a review",
   "contactSupport": "Contact & feedback",
   "contactSupportSubtitle": "Send a suggestion or report a bug",
+  "contactSupportEmailSubject": "{appName} — feedback",
+  "@contactSupportEmailSubject": { "placeholders": { "appName": { "type": "String" } } },
   "gotIt": "Got it",
 
   "newBest": "NEW BEST",
@@ -61,6 +63,7 @@
   "@unlockHintGames": { "placeholders": { "n": { "type": "int" } } },
   "unlockHintDaily": "{n} daily missions",
   "@unlockHintDaily": { "placeholders": { "n": { "type": "int" } } },
+  "unlockHintShop": "Available in Shop",
 
   "shopTitle": "Shop",
   "sectionSkins": "Skins",

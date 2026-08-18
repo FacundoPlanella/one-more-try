@@ -1,11 +1,22 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../../core/constants/game_constants.dart';
+import '../../core/responsive/app_screen.dart';
+import '../../core/responsive/breakpoints.dart';
+import '../../core/responsive/panel_metrics.dart';
+import '../../core/responsive/sliced_image.dart';
 import '../../core/theme/app_theme.dart';
 import '../../domain/entities/skin.dart';
-import '../../services/ads_service.dart';
+
+/// Proporción de los PNG de tarjeta de lista (`tarjeta_skin_tienda.png` y
+/// `tarjeta_medalla.png`, 2172×724). Las tarjetas de skins, tienda y medallas
+/// derivan su alto de su ancho con esta relación: así crecen con la pantalla sin
+/// deformar el marco de madera dibujado.
+const double listCardAspectRatio = 2172 / 724;
 
 /// Envuelve el contenido y reserva siempre el espacio del banner.
 class BannerScaffold extends StatelessWidget {
@@ -13,59 +24,113 @@ class BannerScaffold extends StatelessWidget {
     super.key,
     required this.child,
     this.appBar,
+    this.background,
+    this.constrainWidth = true,
+    this.safeTop,
+    this.showBanner = true,
   });
 
   final Widget child;
   final PreferredSizeWidget? appBar;
 
+  /// Capa de fondo opcional, detrás de TODO el Scaffold. Nunca lleva
+  /// maxWidth ni vive dentro del scroll: cubre el viewport con cover.
+  final Widget? background;
+
+  /// Acota el contenido (no el fondo) vía [ResponsiveContent].
+  /// `GameScreen` pasa `false` porque el HUD ocupa el ancho completo.
+  final bool constrainWidth;
+
+  /// Si es null, se aplica safe area superior solo cuando no hay [appBar]
+  /// (el AppBar ya consume el inset). El juego pasa `false` porque el HUD
+  /// aplica la suya.
+  final bool? safeTop;
+
+  final bool showBanner;
+
   @override
   Widget build(BuildContext context) {
-    final ads = context.watch<AdsService>();
-    // Solo la ruta visible monta el AdWidget (Home debajo de Game no lo duplica).
-    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
-    return Scaffold(
-      appBar: appBar,
-      body: Column(
-        children: [
-          Expanded(child: child),
-          SafeArea(
-            top: false,
-            child: ads.bannerWidget(active: isCurrent),
-          ),
-        ],
-      ),
+    return AppScreen(
+      background: background,
+      header: appBar,
+      constrainWidth: constrainWidth,
+      safeTop: safeTop ?? appBar == null,
+      showBanner: showBanner,
+      body: child,
     );
   }
 }
 
-class BrandTitle extends StatelessWidget {
-  const BrandTitle({super.key, this.compact = false});
+/// Fondo de pantalla fijo a pantalla completa — usado detrás del Home y de
+/// Skins. `BoxFit.cover` + alineación levemente hacia arriba (por defecto)
+/// para nunca deformar el PNG: si una pantalla muy ancha/baja fuerza recorte
+/// vertical, prioriza no perder el detalle de la parte superior del arte
+/// antes que el tramo oscuro del centro/abajo. `FilterQuality.none`
+/// mantiene el pixel art nítido (sin filtrado/blur al escalar) y
+/// `gaplessPlayback` evita parpadeos si el widget se reconstruye — el mismo
+/// `AssetImage` con la misma clave se sirve desde el cache de Flutter en
+/// vez de recargar el archivo en cada frame/rebuild.
+class ScreenBackground extends StatelessWidget {
+  const ScreenBackground(
+    this.asset, {
+    super.key,
+    this.alignment = const Alignment(0, -0.7),
+  });
 
-  final bool compact;
+  final String asset;
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.oneColors;
-    return Text(
-      GameConstants.appName,
-      textAlign: TextAlign.center,
-      style: GoogleFonts.outfit(
-        fontSize: compact ? 28 : 44,
-        fontWeight: FontWeight.w800,
-        height: 1.05,
-        color: colors.text0,
-        letterSpacing: -0.5,
-        shadows: [
-          const Shadow(
-            color: Color(0x731B0F06),
-            offset: Offset(0, 2),
-            blurRadius: 4,
+    return Image(
+      image: AssetImage(asset),
+      fit: BoxFit.cover,
+      alignment: alignment,
+      filterQuality: FilterQuality.none,
+      gaplessPlayback: true,
+    );
+  }
+}
+
+/// Logo principal (logo_one_more_try.png) — usado en el splash de inicio y
+/// en el menú Home en reemplazo del título de texto. Mide el ancho útil vía
+/// `MediaQuery` (no `LayoutBuilder`: este widget vive dentro del
+/// `IntrinsicHeight` del Home, que no soporta hijos que midan su ancho con
+/// `LayoutBuilder` — Flutter tira "LayoutBuilder does not support returning
+/// intrinsic dimensions") para ocupar ~78% de ese ancho, con un tope para
+/// tablets; `AspectRatio` usa la relación real del PNG (1774×887) así que
+/// nunca se deforma, y `BoxFit.contain` conserva su transparencia y el
+/// padding propio del archivo sin recortarlo.
+class BrandLogo extends StatelessWidget {
+  const BrandLogo({super.key});
+
+  static const double _aspectRatio = 1774 / 887;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = context.responsive;
+    final contentWidth = ResponsiveDimens.contentWidthOf(context);
+    final fraction = d.isPhone ? 0.64 : 0.56;
+    final maxW = d.isPhone ? 320.0 : d.scaledSize(560);
+    // El techo absoluto manda sobre el piso proporcional: con un contenido muy
+    // ancho, `contentWidth * 0.48` puede superar [maxW] y ahí `clamp` recibiría
+    // los límites al revés.
+    final upper = math.min(contentWidth * 0.68, maxW);
+    final lower = math.min(contentWidth * 0.48, upper);
+    final width = (contentWidth * fraction).clamp(lower, upper).toDouble();
+    return Semantics(
+      label: GameConstants.appName,
+      image: true,
+      child: SizedBox(
+        width: width,
+        child: AspectRatio(
+          aspectRatio: _aspectRatio,
+          child: Image.asset(
+            'assets/branding/logo_one_more_try.png',
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
           ),
-          Shadow(
-            color: colors.accent.withValues(alpha: 0.28),
-            blurRadius: 18,
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -112,8 +177,80 @@ class _SignButton extends StatefulWidget {
 class _SignButtonState extends State<_SignButton> {
   bool _pressed = false;
 
+  static const double _nativeW = 1774;
+  static const double _nativeH = 887;
+
+  // Cara de madera dentro del marco dorado, medida sobre boton_normal /
+  // presionado / deshabilitado: la madera arranca en 0.26 del alto y termina en
+  // 0.69, así que su centro está por encima del centro geométrico del PNG. El
+  // inset horizontal va en unidades de alto porque las tapas del 3-slice
+  // (hojas) conservan proporción y por lo tanto escalan con el alto.
+  static const double _faceTop = 0.26;
+  static const double _faceBottom = 0.69;
+  static const double _faceInsetX = 0.42;
+
   void _setPressed(bool value) {
     if (_pressed != value) setState(() => _pressed = value);
+  }
+
+  /// Contenido del cartel a tamaño lógico. El PNG se dibuja con 3-slice
+  /// horizontal: las hojas de los extremos no se deforman; el centro de
+  /// madera se estira al ancho pedido. Nunca se usa 1774×887 como dp.
+  Widget _sign({
+    required String asset,
+    required bool enabled,
+    required double fontSize,
+    double? width,
+    double? height,
+  }) {
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final h = constraints.maxHeight;
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            HorizontalSliceImage(
+              asset: asset,
+              nativeWidth: _nativeW,
+              nativeHeight: _nativeH,
+            ),
+            // El texto se centra dentro de la cara de madera, no del cartel
+            // completo. Sin `Center`, el `FittedBox` se ancla arriba-izquierda
+            // del padding y en tablet (botón mucho más alto que la fuente)
+            // PLAY / One more try. quedan pegados al marco dorado.
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                h * _faceInsetX,
+                h * _faceTop,
+                h * _faceInsetX,
+                h * (1 - _faceBottom),
+              ),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: GoogleFonts.outfit(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w800,
+                      color: enabled ? _signTextEnabled : _signTextDisabled,
+                      shadows: _signTextShadow,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (width == null || height == null) {
+      return AspectRatio(aspectRatio: 3.2, child: content);
+    }
+    return SizedBox(width: width, height: height, child: content);
   }
 
   @override
@@ -122,36 +259,48 @@ class _SignButtonState extends State<_SignButton> {
     final asset = !enabled
         ? 'assets/images/ui/boton_deshabilitado.png'
         : _pressed
-            ? 'assets/images/ui/boton_presionado.png'
-            : 'assets/images/ui/boton_normal.png';
+        ? 'assets/images/ui/boton_presionado.png'
+        : 'assets/images/ui/boton_normal.png';
+
+    double? expandedWidth;
+    double? expandedHeight;
+    var fontSize = widget.fontSize;
+    if (widget.expanded) {
+      final d = context.responsive;
+      final contentWidth = ResponsiveDimens.contentWidthOf(context);
+      final targetWidth = (contentWidth *
+              ResponsiveDimens.playButtonWidthFraction)
+          .clamp(contentWidth * 0.55, contentWidth * 0.72)
+          .toDouble();
+      expandedWidth = targetWidth;
+      expandedHeight = d.playButtonHeight;
+      fontSize = d.scaledSize(
+        widget.fontSize,
+        min: ResponsiveDimens.playButtonMinFontSize,
+      );
+    } else if (widget.maxWidth != null) {
+      final d = context.responsive;
+      expandedWidth = widget.maxWidth;
+      expandedHeight = math.max(
+        d.isPhone ? ResponsiveDimens.minTouchTarget : 56.0,
+        widget.maxWidth! / 3.2,
+      );
+      // El cartel crece en tablet pero la tipografía no venía escalando con
+      // él, así que el texto quedaba chico en un botón grande. En celular
+      // `uiScale` es 1 y esto no cambia nada.
+      fontSize = d.scaledSize(widget.fontSize, min: widget.fontSize);
+    }
 
     final sign = AnimatedScale(
       scale: _pressed ? 0.97 : 1.0,
       duration: const Duration(milliseconds: 90),
       curve: Curves.easeOut,
-      child: AspectRatio(
-        aspectRatio: 1774 / 887,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(child: Image.asset(asset, fit: BoxFit.fill)),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 26),
-              child: Text(
-                widget.label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  fontSize: widget.fontSize,
-                  fontWeight: FontWeight.w800,
-                  color: enabled ? _signTextEnabled : _signTextDisabled,
-                  shadows: _signTextShadow,
-                ),
-              ),
-            ),
-          ],
-        ),
+      child: _sign(
+        asset: asset,
+        enabled: enabled,
+        fontSize: fontSize,
+        width: expandedWidth,
+        height: expandedHeight,
       ),
     );
 
@@ -170,7 +319,7 @@ class _SignButtonState extends State<_SignButton> {
     );
 
     if (widget.expanded) {
-      return SizedBox(width: double.infinity, child: button);
+      return Center(child: button);
     }
     if (widget.maxWidth != null) {
       return SizedBox(width: widget.maxWidth, child: button);
@@ -187,11 +336,16 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.expanded = true,
+    this.maxWidth,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final bool expanded;
+
+  /// Ancho fijo, para los casos en los que el botón no ocupa el ancho de
+  /// contenido (paneles). Se ignora cuando [expanded] es true.
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +354,7 @@ class PrimaryButton extends StatelessWidget {
       onPressed: onPressed,
       expanded: expanded,
       fontSize: 21,
+      maxWidth: maxWidth,
     );
   }
 }
@@ -241,11 +396,15 @@ class PurchaseButton extends StatefulWidget {
     required this.label,
     required this.onPressed,
     this.width = 116,
+    this.maxHeight,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final double width;
+
+  /// Techo de alto cuando el botón va dentro de una tarjeta de lista.
+  final double? maxHeight;
 
   @override
   State<PurchaseButton> createState() => _PurchaseButtonState();
@@ -260,33 +419,62 @@ class _PurchaseButtonState extends State<PurchaseButton> {
 
   @override
   Widget build(BuildContext context) {
+    final d = context.responsive;
     final enabled = widget.onPressed != null;
     final asset = enabled
         ? 'assets/images/ui/boton_comprar.png'
         : 'assets/images/ui/boton_comprar_deshabilitado.png';
+    // El ancho llega ya escalado por el caller (misma pauta que
+    // SecondaryButton): volver a multiplicarlo por `uiScale` acá hacía que el
+    // botón midiera el cuadrado de la escala y desbordara la tarjeta en tablet.
+    final width = widget.width;
+    var height = math.max(
+      d.isPhone ? ResponsiveDimens.minTouchTarget : 56.0,
+      width / 3.2,
+    );
+    if (widget.maxHeight != null && height > widget.maxHeight!) {
+      height = widget.maxHeight!;
+    }
     final sign = AnimatedScale(
       scale: _pressed ? 0.96 : 1.0,
       duration: const Duration(milliseconds: 90),
       curve: Curves.easeOut,
-      child: AspectRatio(
-        // Proporción original de boton_comprar*.png — no se deforma.
-        aspectRatio: 1855 / 848,
+      child: SizedBox(
+        width: width,
+        height: height,
         child: Stack(
-          alignment: Alignment.center,
+          fit: StackFit.expand,
           children: [
-            Positioned.fill(child: Image.asset(asset, fit: BoxFit.fill)),
+            HorizontalSliceImage(
+              asset: asset,
+              nativeWidth: 1855,
+              nativeHeight: 848,
+            ),
+            // Cara de madera de boton_comprar.png: 0.316–0.688 del alto. Igual
+            // que en los carteles, el texto se centra en esa franja y no en la
+            // caja completa.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text(
-                widget.label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: enabled ? woodPlateTextPrimary : _signTextDisabled,
-                  shadows: _signTextShadow,
+              padding: EdgeInsets.fromLTRB(
+                height * 0.30,
+                height * 0.316,
+                height * 0.30,
+                height * 0.312,
+              ),
+              child: Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    widget.label,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: GoogleFonts.outfit(
+                      fontSize: d.scaledFont(14, min: 13),
+                      fontWeight: FontWeight.w800,
+                      color: enabled ? woodPlateTextPrimary : _signTextDisabled,
+                      shadows: _signTextShadow,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -295,20 +483,17 @@ class _PurchaseButtonState extends State<PurchaseButton> {
       ),
     );
 
-    return SizedBox(
-      width: widget.width,
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: widget.label,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: enabled ? (_) => _setPressed(true) : null,
-          onTapUp: enabled ? (_) => _setPressed(false) : null,
-          onTapCancel: enabled ? () => _setPressed(false) : null,
-          onTap: widget.onPressed,
-          child: sign,
-        ),
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: enabled ? (_) => _setPressed(true) : null,
+        onTapUp: enabled ? (_) => _setPressed(false) : null,
+        onTapCancel: enabled ? () => _setPressed(false) : null,
+        onTap: widget.onPressed,
+        child: sign,
       ),
     );
   }
@@ -403,13 +588,16 @@ class TitlePlate extends StatelessWidget {
                 // Además de medir bien arriba, esto es una red de
                 // seguridad: si el texto igual no entra (fuente aún no
                 // cargada, etc.), encoge en vez de truncar con "…".
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    text,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: textStyle,
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.center,
+                    child: Text(
+                      text,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: textStyle,
+                    ),
                   ),
                 ),
               ),
@@ -421,16 +609,71 @@ class TitlePlate extends StatelessWidget {
   }
 }
 
+/// AppBar transparente sobre el fondo de arte, con altura y placa
+/// escaladas por breakpoint. `preferredSize` usa el máximo de tablet
+/// grande; el `toolbarHeight` real sale de [ResponsiveDimens].
+class GameAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const GameAppBar({
+    super.key,
+    required this.title,
+    required this.height,
+    this.backTooltip,
+    this.actions,
+  });
+
+  final String title;
+  final String? backTooltip;
+  final List<Widget>? actions;
+
+  /// Alto de la barra. Lo pasa el caller —normalmente
+  /// `context.responsive.appBarHeight`— porque `Scaffold` consulta
+  /// [preferredSize] antes de construir el widget y acá no hay contexto para
+  /// leer el breakpoint. Con los 68 dp fijos que tenía, en tablet la placa del
+  /// título y el contador de monedas ya no entraban y quedaban recortados.
+  final double height;
+
+  @override
+  Size get preferredSize => Size.fromHeight(height);
+
+  @override
+  Widget build(BuildContext context) {
+    final d = context.responsive;
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      toolbarHeight: preferredSize.height,
+      // El ancho por defecto del `leading` (56 dp) recortaba el botón de volver
+      // en cuanto este escalaba.
+      leadingWidth: d.scaledSize(64),
+      titleSpacing: d.scaledSize(8),
+      leading: WoodBackButton(tooltip: backTooltip),
+      title: TitlePlate(
+        text: title,
+        height: d.scaledSize(40),
+        fontSize: d.scaledFont(17, min: 16),
+      ),
+      actions: actions,
+    );
+  }
+}
+
 /// Insignia de rango (insignia_rango.png) del Home — hoja + cartel +
 /// cintas colgantes. Tamaño fijo y proporción intacta (no se estira como
 /// [TitlePlate]: la silueta de cinta/hoja se vería rota si se deformara),
 /// el nombre del rango se ajusta con [FittedBox] para caber en cualquier
 /// idioma sin desbordar ni tocar las puntas del cartel.
 class RankBadge extends StatelessWidget {
-  const RankBadge({super.key, required this.text, this.width = 210});
+  const RankBadge({
+    super.key,
+    required this.text,
+    this.width = 210,
+    this.fontSize = 15,
+  });
 
   final String text;
   final double width;
+  final double fontSize;
 
   static const _aspect = 1814 / 867;
   // Franja de madera dentro del PNG (fracciones del canvas completo):
@@ -465,7 +708,7 @@ class RankBadge extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   style: GoogleFonts.outfit(
-                    fontSize: 15,
+                    fontSize: fontSize,
                     fontWeight: FontWeight.w700,
                     color: woodPlateTextPrimary,
                     shadows: _signTextShadow,
@@ -904,14 +1147,70 @@ class _WoodBackButtonState extends State<WoodBackButton> {
 
   @override
   Widget build(BuildContext context) {
+    final d = context.responsive;
+    final size = d.scaledSize(48);
     return Padding(
-      padding: const EdgeInsets.only(left: 8),
+      padding: EdgeInsets.only(left: d.scaledSize(8)),
       child: AssetIconButton(
         asset: 'assets/images/ui/boton_volver.png',
-        size: 42,
+        size: size,
         tooltip: widget.tooltip,
         onPressed: _handleTap,
       ),
+    );
+  }
+}
+
+/// Formatea un entero con el separador de miles del locale activo de la
+/// app (`es` → 1.000, `en` → 1,000) — reutilizado por [PointsCounter] y
+/// [CoinLabel] en vez de interpolar el número crudo.
+String formatCount(BuildContext context, int value) {
+  return NumberFormat.decimalPattern(
+    Localizations.localeOf(context).toString(),
+  ).format(value);
+}
+
+/// Texto numérico de una sola línea que reduce su tamaño de fuente lo
+/// justo para entrar en el ancho disponible, sin cortar dígitos ni usar
+/// puntos suspensivos. `style.fontSize` es el techo (se respeta tal cual
+/// para valores cortos, nunca se agranda); solo baja para valores largos,
+/// a la medida exacta que hace falta — un piso fijo podría forzar el
+/// número a desbordar la zona flexible y pisar el marco dorado.
+class _ShrinkToFitText extends StatelessWidget {
+  const _ShrinkToFitText({required this.text, required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxFontSize = style.fontSize ?? 14;
+    final textScaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        var fontSize = maxFontSize;
+        if (constraints.maxWidth.isFinite) {
+          final painter = TextPainter(
+            text: TextSpan(text: text, style: style),
+            textDirection: Directionality.of(context),
+            textScaler: textScaler,
+            maxLines: 1,
+          )..layout();
+          if (painter.width > constraints.maxWidth && painter.width > 0) {
+            fontSize = maxFontSize * (constraints.maxWidth / painter.width);
+          }
+        }
+        return Center(
+          child: Text(
+            text,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.visible,
+            textScaler: textScaler,
+            style: style.copyWith(fontSize: fontSize),
+          ),
+        );
+      },
     );
   }
 }
@@ -994,26 +1293,50 @@ class CoinLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final row = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Image.asset(
-          'assets/images/ui/icono_moneda.png',
-          width: iconSize,
-          height: iconSize,
-        ),
-        const SizedBox(width: 6),
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text('$prefix$amount', style: style),
-          ),
-        ),
-      ],
+    final formatted = '$prefix${formatCount(context, amount)}';
+    final icon = Image.asset(
+      'assets/images/ui/icono_moneda.png',
+      width: iconSize,
+      height: iconSize,
     );
-    if (!plated) return row;
-    return CounterPlate(width: width, child: row);
+    if (!plated) {
+      // Una sola pieza que se achica si el padre es más angosto que el
+      // monto: `Flexible` dentro de un `Row` `min` no recortaba y el
+      // precio se salía del marco de la tarjeta.
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            icon,
+            const SizedBox(width: 6),
+            Text(formatted, style: style, maxLines: 1, softWrap: false),
+          ],
+        ),
+      );
+    }
+    // Ícono en zona fija a la izquierda, número en zona flexible propia:
+    // así el ícono nunca se mueve ni se superpone, sea cual sea la
+    // cantidad de dígitos, y el número se autoajusta sin tocar el marco.
+    return CounterPlate(
+      width: width,
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          icon,
+          const SizedBox(width: 6),
+          Expanded(
+            child: _ShrinkToFitText(
+              text: formatted,
+              style: style ?? DefaultTextStyle.of(context).style,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1084,18 +1407,21 @@ class HudCounter extends StatelessWidget {
                     w * _textRight,
                     0,
                   ),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      value,
-                      maxLines: 1,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 20,
-                        // Fijo, no `colors.text0`: el fondo es arte de
-                        // madera constante, no cambia con el tema.
-                        color: valueColor ?? woodPlateTextPrimary,
-                        shadows: _signTextShadow,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Text(
+                        value,
+                        maxLines: 1,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 20,
+                          // Fijo, no `colors.text0`: el fondo es arte de
+                          // madera constante, no cambia con el tema.
+                          color: valueColor ?? woodPlateTextPrimary,
+                          shadows: _signTextShadow,
+                        ),
                       ),
                     ),
                   ),
@@ -1132,25 +1458,25 @@ class PointsCounter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.oneColors;
-    final number = FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Text(
-        '$value',
-        style: GoogleFonts.outfit(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w800,
-          color: color ?? colors.text0,
-          height: 1,
-        ),
+    final number = _ShrinkToFitText(
+      text: formatCount(context, value),
+      style: GoogleFonts.outfit(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w800,
+        color: color ?? colors.text0,
+        height: 1,
       ),
     );
+    // Ícono en zona fija a la izquierda, número en zona flexible propia:
+    // así el trofeo nunca se mueve ni se superpone, sea cual sea la
+    // cantidad de dígitos, y el número se autoajusta sin tocar el marco.
     return CounterPlate(
       width: width,
       child: !showTrophy
           ? number
           : Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Image.asset(
                   'assets/images/ui/icono_puntos.png',
@@ -1158,7 +1484,7 @@ class PointsCounter extends StatelessWidget {
                   height: trophySize,
                 ),
                 const SizedBox(width: 8),
-                Flexible(child: number),
+                Expanded(child: number),
               ],
             ),
     );
@@ -1294,6 +1620,18 @@ class RarityDiamond extends StatelessWidget {
 /// con target accesible, un solo disparo por instancia). Se diferencia por
 /// el borde verde del cartel — para la acción afirmativa, no la de
 /// cancelar.
+/// Ancho de diseño de los botones de acción ilustrados y su tipografía a ese
+/// ancho. Escalarla con el ancho real es necesario porque el `FittedBox` que
+/// envuelve al texto solo reduce: sin esto, un botón ensanchado para tablet
+/// conservaba la tipografía del ancho de celular.
+const double _actionButtonDesignWidth = 160;
+const double _actionButtonFontSize = 16;
+
+double _labelFontSize(double width) => math.max(
+  _actionButtonFontSize,
+  _actionButtonFontSize * width / _actionButtonDesignWidth,
+);
+
 class PrimaryActionButton extends StatefulWidget {
   const PrimaryActionButton({
     super.key,
@@ -1362,19 +1700,22 @@ class _PrimaryActionButtonState extends State<PrimaryActionButton> {
                       horizontal: 20,
                       vertical: 8,
                     ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        widget.label,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: enabled
-                              ? woodPlateTextPrimary
-                              : _signTextDisabled,
-                          shadows: _signTextShadow,
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Text(
+                          widget.label,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            fontSize: _labelFontSize(widget.width),
+                            color: enabled
+                                ? woodPlateTextPrimary
+                                : _signTextDisabled,
+                            shadows: _signTextShadow,
+                          ),
                         ),
                       ),
                     ),
@@ -1456,19 +1797,22 @@ class _SecondaryActionButtonState extends State<SecondaryActionButton> {
                       horizontal: 20,
                       vertical: 8,
                     ),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        widget.label,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                          color: enabled
-                              ? woodPlateTextPrimary
-                              : _signTextDisabled,
-                          shadows: _signTextShadow,
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: Text(
+                          widget.label,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w700,
+                            fontSize: _labelFontSize(widget.width),
+                            color: enabled
+                                ? woodPlateTextPrimary
+                                : _signTextDisabled,
+                            shadows: _signTextShadow,
+                          ),
                         ),
                       ),
                     ),
@@ -1620,80 +1964,131 @@ class _ConfirmationPanelState extends State<ConfirmationPanel> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
       child: SafeArea(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420, maxHeight: 380),
-          child: AspectRatio(
-            // Proporción original de panel_confirmacion.png — no se
-            // deforma.
-            aspectRatio: 1448 / 1086,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  'assets/images/ui/panel_confirmacion.png',
-                  fit: BoxFit.contain,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(30, 40, 30, 22),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        widget.title,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.outfit(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                          color: woodPlateTextPrimary,
-                          shadows: _signTextShadow,
-                        ),
+        // maxWidth/maxHeight son techos para pantallas grandes, no un
+        // tamaño fijo: en una pantalla chica o baja `constraints` ya viene
+        // acotado por el espacio real disponible tras `insetPadding`, así
+        // que topar ahí (en vez de en el valor fijo) evita que el título o
+        // los botones —que no scrollean, a diferencia de la descripción—
+        // terminen recortados por un panel más alto que la pantalla.
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            const aspectRatio = 1448 / 1086;
+            final panel = PanelMetrics.resolve(
+              context,
+              constraints: constraints,
+              designWidth: 420,
+              designHeight: 380,
+              aspectRatio: aspectRatio,
+            );
+            final s = panel.scale;
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: panel.maxWidth,
+                maxHeight: panel.maxHeight,
+              ),
+              child: AspectRatio(
+                // Proporción original de panel_confirmacion.png — no se
+                // deforma.
+                aspectRatio: aspectRatio,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      'assets/images/ui/panel_confirmacion.png',
+                      fit: BoxFit.contain,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        30 * s,
+                        40 * s,
+                        30 * s,
+                        22 * s,
                       ),
-                      const SizedBox(height: 10),
-                      Flexible(
-                        child: SingleChildScrollView(
-                          child: Text(
-                            widget.description,
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
-                              fontSize: 13,
-                              color: woodPlateTextSecondary,
-                              height: 1.3,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SecondaryActionButton(
-                            label: widget.cancelLabel,
-                            width: 130,
-                            onPressed: _deciding ? null : () => _decide(false),
+                          Text(
+                            widget.title,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.outfit(
+                              fontSize: 19 * s,
+                              fontWeight: FontWeight.w800,
+                              color: woodPlateTextPrimary,
+                              shadows: _signTextShadow,
+                            ),
                           ),
-                          const SizedBox(width: 12),
-                          PrimaryActionButton(
-                            label: widget.confirmLabel,
-                            width: 150,
-                            onPressed: _deciding ? null : () => _decide(true),
+                          SizedBox(height: 10 * s),
+                          Flexible(
+                            child: SingleChildScrollView(
+                              child: Text(
+                                widget.description,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 13 * s,
+                                  color: woodPlateTextSecondary,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 18 * s),
+                          LayoutBuilder(
+                            builder: (context, row) {
+                              // Los anchos de diseño (130 + 150 + 12) no
+                              // entran en el panel de un celular angosto, así
+                              // que se reparte el ancho real manteniendo la
+                              // proporción entre ambos botones.
+                              final gap = 12 * s;
+                              final available = row.maxWidth - gap;
+                              final cancelWidth = math.min(
+                                130 * s,
+                                available * 130 / 280,
+                              );
+                              final confirmWidth = math.min(
+                                150 * s,
+                                available * 150 / 280,
+                              );
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SecondaryActionButton(
+                                    label: widget.cancelLabel,
+                                    width: cancelWidth,
+                                    onPressed: _deciding
+                                        ? null
+                                        : () => _decide(false),
+                                  ),
+                                  SizedBox(width: gap),
+                                  PrimaryActionButton(
+                                    label: widget.confirmLabel,
+                                    width: confirmWidth,
+                                    onPressed: _deciding
+                                        ? null
+                                        : () => _decide(true),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                    Positioned(
+                      top: 6 * s,
+                      right: 6 * s,
+                      child: PanelCloseButton(
+                        tooltip: widget.cancelLabel,
+                        tapSize: 44 * s,
+                        iconSize: 30 * s,
+                        onPressed: () => _decide(false),
+                      ),
+                    ),
+                  ],
                 ),
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: PanelCloseButton(
-                    tooltip: widget.cancelLabel,
-                    onPressed: () => _decide(false),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

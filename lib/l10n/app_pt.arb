@@ -33,6 +33,8 @@
   "rateAppSubtitle": "Está gostando? Deixe sua avaliação",
   "contactSupport": "Contato e feedback",
   "contactSupportSubtitle": "Envie uma sugestão ou reporte um bug",
+  "contactSupportEmailSubject": "{appName} — feedback",
+  "@contactSupportEmailSubject": { "placeholders": { "appName": { "type": "String" } } },
   "gotIt": "Entendi",
 
   "newBest": "NOVO RECORDE",
@@ -55,6 +57,7 @@
   "unlockHintScore": "Melhor pontuação ≥ {n}",
   "unlockHintGames": "{n} partidas",
   "unlockHintDaily": "{n} missões diárias",
+  "unlockHintShop": "Disponível na Loja",
 
   "shopTitle": "Loja",
   "sectionSkins": "Skins",

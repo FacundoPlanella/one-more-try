@@ -282,6 +282,12 @@ abstract class AppLocalizations {
   /// **'Send a suggestion or report a bug'**
   String get contactSupportSubtitle;
 
+  /// No description provided for @contactSupportEmailSubject.
+  ///
+  /// In en, this message translates to:
+  /// **'{appName} — feedback'**
+  String contactSupportEmailSubject(String appName);
+
   /// No description provided for @gotIt.
   ///
   /// In en, this message translates to:
@@ -395,6 +401,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{n} daily missions'**
   String unlockHintDaily(int n);
+
+  /// No description provided for @unlockHintShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Available in Shop'**
+  String get unlockHintShop;
 
   /// No description provided for @shopTitle.
   ///

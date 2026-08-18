@@ -52,7 +52,7 @@ APK: `build/app/outputs/flutter-apk/app-release.apk`
 
 ## AdMob
 
-Replace **test** IDs before release (see `STORE_CHECKLIST.md`).
+Ships with Google's **test** ad unit IDs by default (debug and release builds alike). Fill in `androidBannerIdProd` / `iosBannerIdProd` in `lib/core/constants/game_constants.dart` and build with `--dart-define=ADS_PROD=true` only for the production release (see `STORE_CHECKLIST.md`).
 
 ## License
 

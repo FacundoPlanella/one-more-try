@@ -29,6 +29,57 @@ class GameConstants {
   /// Perdón de hitbox (fracción del ancho de carril).
   static const double hitboxForgiveness = 0.05;
 
+  /// Ancho de carril "de diseño": playerRadius, el sprite del jugador, el
+  /// alto de fila de obstáculos y el tamaño de los coleccionables están
+  /// calibrados a ojo contra este valor. `OneGame` escala esos tamaños en
+  /// proporción a `laneWidth actual / referenceLaneWidth` (ver
+  /// `OneGame._sizeScale`) para que jugador/obstáculos/coleccionables
+  /// guarden siempre la misma proporción entre sí sin importar el ancho de
+  /// pantalla real — en este ancho de referencia el resultado es idéntico
+  /// al de antes de introducir el escalado.
+  static const double referenceLaneWidth = 130;
+  static const double minSizeScale = 0.75;
+
+  /// Techo de la hitbox. La colisión en X es por índice de carril, no por
+  /// píxeles: agrandar este factor solo estira la ventana vertical. El
+  /// espaciado entre filas (gap en segundos, [coinTrailRowSpacing] en px) no
+  /// escala con el carril, así que un techo de 2–8 en tablet hacía que dos
+  /// filas seguidas se solaparan, se comieran el escudo y dejaran tramos
+  /// sin carril libre. 1.2 deja holgura respecto de 110 px y no cambia el
+  /// celular (ahí el factor queda en 0.75–0.9).
+  static const double maxSizeScale = 1.2;
+
+  /// Alto de diseño de una fila de obstáculos, en px lógicos. La hitbox
+  /// vertical usa [obstacleHitHeightFactor] de este valor.
+  static const double obstacleRowBaseHeight = 56;
+  static const double obstacleHitHeightFactor = 0.52;
+
+  /// Distancia fija entre filas de una racha de monedas. Tiene que ser
+  /// mayor que dos radios de hitbox o las cajas se solapan.
+  static const double coinTrailRowSpacing = 110;
+
+  /// Escala visual (sprite) independiente de la hitbox. No se apila con el
+  /// crecimiento del carril: en tablet se toma el mayor entre la escala del
+  /// carril y el x2 pedido, no el producto (eso era ~4× y superponía rocas).
+  static const double minVisualScale = 0.9;
+  static const double maxVisualScale = 2.6;
+
+  /// Mitad de la ventana vertical de colisión (roca + jugador) a una
+  /// [collisionScale] dada. Dos filas a distancia D son jugables solo si
+  /// `2 * rowHitHalfExtent(scale) < D`.
+  static double rowHitHalfExtent(double collisionScale) {
+    final half =
+        obstacleRowBaseHeight * collisionScale * obstacleHitHeightFactor / 2;
+    final radius = playerRadius * collisionScale * (1 - hitboxForgiveness);
+    return half + radius;
+  }
+
+  static double collisionScaleForLaneWidth(double laneWidth) {
+    return (laneWidth / referenceLaneWidth)
+        .clamp(minSizeScale, maxSizeScale)
+        .toDouble();
+  }
+
   static const double baseScrollSpeed = 220;
   static const double maxScrollSpeed = 520;
   static const double maxGapSeconds = 2.4;
@@ -89,9 +140,19 @@ class GameConstants {
   /// obstáculo que lo gastó mate al jugador un frame después).
   static const double shieldInvulnSeconds = 0.4;
 
-  // AdMob — IDs de TEST. Reemplazar en release (ver README).
+  // AdMob — IDs de TEST oficiales de Google. AdsService los usa siempre
+  // fuera de kReleaseMode, así que estos nunca deben tocarse a mano ni
+  // reemplazarse por IDs reales (eso arriesgaría cuenta AdMob por clicks
+  // propios en desarrollo).
   static const String androidAppId = 'ca-app-pub-3940256099942544~3347511713';
   static const String iosAppId = 'ca-app-pub-3940256099942544~1458002511';
   static const String androidBannerId = 'ca-app-pub-3940256099942544/6300978111';
   static const String iosBannerId = 'ca-app-pub-3940256099942544/2934735716';
+
+  // AdMob — IDs de PRODUCCIÓN. Completar antes de publicar (ver
+  // STORE_CHECKLIST.md); AdsService solo los usa en kReleaseMode. Si se
+  // deja vacío, el release simplemente no muestra banner (no cae al ID de
+  // test).
+  static const String androidBannerIdProd = '';
+  static const String iosBannerIdProd = '';
 }

@@ -103,6 +103,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contactSupportSubtitle => '发送建议或反馈问题';
 
   @override
+  String contactSupportEmailSubject(String appName) {
+    return '$appName — 反馈';
+  }
+
+  @override
   String get gotIt => '知道了';
 
   @override
@@ -168,6 +173,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String unlockHintDaily(int n) {
     return '$n 个每日任务';
   }
+
+  @override
+  String get unlockHintShop => '可在商店获取';
 
   @override
   String get shopTitle => '商店';

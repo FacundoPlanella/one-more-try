@@ -11,7 +11,7 @@ Package: `one.more.try`
 ## 2. Firma de la app (obligatorio) — ✅ hecho
 
 Keystore ya generada (`android/keystore/upload-keystore.jks`) y `android/key.properties` configurado.
-`.aab` de release ya compilado y firmado con esa key: `build/app/outputs/bundle/release/app-release.aab` (v1.0.1, versionCode 10).
+`.aab` de release ya compilado y firmado con esa key: `build/app/outputs/bundle/release/app-release.aab` (v1.0.1, versionCode 11).
 
 **Importante:** Play Console rechaza un `.aab` si su versionCode ya fue subido antes (aunque sea a un track de prueba). Antes de cada subida, subí el número después del `+` en `version:` de `pubspec.yaml` (ej. `1.0.1+10` → `1.0.1+11`) y volvé a compilar.
 
@@ -53,8 +53,12 @@ storeFile=../keystore/upload-keystore.jks
 ## 3. AdMob (producción)
 
 - [ ] Crear app + unidad **Banner** en AdMob
-- [ ] Reemplazar IDs de **test** en:
-  - `lib/core/constants/game_constants.dart`
+- [ ] Completar los IDs reales en `androidBannerIdProd` / `iosBannerIdProd`
+      (`lib/core/constants/game_constants.dart`) — el código los usa
+      automáticamente solo cuando el build se compila con
+      `--dart-define=ADS_PROD=true` (ver §7.3). Sin ese flag, todos los
+      builds (debug y release) siguen usando los IDs de test.
+- [ ] Reemplazar el App ID de test en:
   - `android/app/src/main/AndroidManifest.xml`
   - `ios/Runner/Info.plist`
 - [ ] Configurar mensaje de consentimiento UMP (EEA/UK)
@@ -114,7 +118,7 @@ Google exige pasar por testing antes de producción si la cuenta de desarrollado
 
 ### 7.3 Anuncios durante testing
 
-Los IDs de AdMob en el código **son los de test oficiales de Google** (`ca-app-pub-3940256099942544/...`) — correcto para esta fase, no los cambies todavía. Recién reemplazalos por los reales (paso 3 de este documento) cuando vayas a subir el release de **producción**, nunca antes: mostrar ads reales en testing viola la política de tráfico inválido de AdMob.
+El banner usa el ID de **test** oficial de Google (`ca-app-pub-3940256099942544/...`) en todos los builds por defecto, incluido `flutter build appbundle --release` para internal/closed testing — correcto para esta fase, no hace falta tocar nada. El ID real (paso 3 de este documento) solo se activa compilando explícitamente con `--dart-define=ADS_PROD=true`; usá ese flag únicamente para el `.aab` que subís al track de **producción**, nunca antes: mostrar ads reales en testing viola la política de tráfico inválido de AdMob.
 
 ### 7.4 Formularios previos al primer release (se piden antes de poder subir cualquier track)
 

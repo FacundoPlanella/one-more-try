@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'presentation/controllers/app_controller.dart';
 import 'presentation/screens/splash_screen.dart';
+import 'services/ads_service.dart';
 import 'services/audio_service.dart';
 
 class OneMoreTryApp extends StatefulWidget {
@@ -35,6 +36,14 @@ class _OneMoreTryAppState extends State<OneMoreTryApp> with WidgetsBindingObserv
     switch (state) {
       case AppLifecycleState.resumed:
         audio.playMusic();
+        // Si el banner nunca cargó (p.ej. arrancó sin conexión) o falló,
+        // reintentar al volver a foreground — loadBanner() ya se
+        // autoprotege contra cargas superpuestas (AdsService._loading).
+        final ads = context.read<AdsService>();
+        if (!ads.isReady) {
+          // ignore: unawaited_futures
+          ads.loadBanner();
+        }
       // "inactive" es transitorio (diálogos del sistema, banners de ads,
       // notificaciones) y no significa que el usuario salió de la app —
       // pausar ahí puede cortar la música apenas arranca en algunos
@@ -59,6 +68,11 @@ class _OneMoreTryAppState extends State<OneMoreTryApp> with WidgetsBindingObserv
       // Único tema soportado — no hay claro/sistema para elegir.
       theme: AppTheme.dark(),
       themeMode: ThemeMode.dark,
+      // El multiplicador global de `TextScaler` que vivía acá se sacó: con
+      // `ResponsiveDimens.uiScale` (core/responsive/breakpoints.dart)
+      // aplicado explícitamente por componente en las pantallas que lo
+      // necesitan, tener ADEMÁS un multiplicador global hubiera escalado
+      // esos mismos textos dos veces.
       locale: Locale(languageCode),
       localizationsDelegates: const [
         AppLocalizations.delegate,
