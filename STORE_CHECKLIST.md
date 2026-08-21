@@ -11,7 +11,7 @@ Package: `one.more.try`
 ## 2. Firma de la app (obligatorio) — ✅ hecho
 
 Keystore ya generada (`android/keystore/upload-keystore.jks`) y `android/key.properties` configurado.
-`.aab` de release ya compilado y firmado con esa key: `build/app/outputs/bundle/release/app-release.aab` (v1.0.1, versionCode 11).
+`.aab` de release ya compilado y firmado con esa key: `build/app/outputs/bundle/release/app-release.aab` (v1.0.1, versionCode 13).
 
 **Importante:** Play Console rechaza un `.aab` si su versionCode ya fue subido antes (aunque sea a un track de prueba). Antes de cada subida, subí el número después del `+` en `version:` de `pubspec.yaml` (ej. `1.0.1+10` → `1.0.1+11`) y volvé a compilar.
 
@@ -52,15 +52,13 @@ storeFile=../keystore/upload-keystore.jks
 
 ## 3. AdMob (producción)
 
-- [ ] Crear app + unidad **Banner** en AdMob
-- [ ] Completar los IDs reales en `androidBannerIdProd` / `iosBannerIdProd`
-      (`lib/core/constants/game_constants.dart`) — el código los usa
-      automáticamente solo cuando el build se compila con
-      `--dart-define=ADS_PROD=true` (ver §7.3). Sin ese flag, todos los
-      builds (debug y release) siguen usando los IDs de test.
-- [ ] Reemplazar el App ID de test en:
-  - `android/app/src/main/AndroidManifest.xml`
-  - `ios/Runner/Info.plist`
+- [x] Crear app + unidad **Banner** en AdMob (Android)
+- [x] Completar los IDs reales Android en `androidAppIdProd` /
+      `androidBannerIdProd` (`lib/core/constants/game_constants.dart`).
+      En `main`, el **release** usa esos IDs; **debug** sigue con IDs de
+      test de Google. iOS queda pendiente (sin App Store todavía).
+- [x] App ID de producción en `android/app/src/main/AndroidManifest.xml`
+- [ ] Reemplazar el App ID de test en `ios/Runner/Info.plist` (cuando se publique iOS)
 - [ ] Configurar mensaje de consentimiento UMP (EEA/UK)
 
 ## 4. Assets de tienda
@@ -118,7 +116,9 @@ Google exige pasar por testing antes de producción si la cuenta de desarrollado
 
 ### 7.3 Anuncios durante testing
 
-El banner usa el ID de **test** oficial de Google (`ca-app-pub-3940256099942544/...`) en todos los builds por defecto, incluido `flutter build appbundle --release` para internal/closed testing — correcto para esta fase, no hace falta tocar nada. El ID real (paso 3 de este documento) solo se activa compilando explícitamente con `--dart-define=ADS_PROD=true`; usá ese flag únicamente para el `.aab` que subís al track de **producción**, nunca antes: mostrar ads reales en testing viola la política de tráfico inválido de AdMob.
+Los tracks de **internal / closed testing** se compilan desde la rama **`test`**, que no tiene IDs de producción: el banner usa el ID de **test** oficial de Google (`ca-app-pub-3940256099942544/...`). Mostrar ads reales en testing viola la política de tráfico inválido de AdMob.
+
+El `.aab` de **producción** se compila desde **`main`** (`flutter build appbundle --release`): App ID `ca-app-pub-2433691102754840~1644832695` y unidad banner `ca-app-pub-2433691102754840/7872678161`.
 
 ### 7.4 Formularios previos al primer release (se piden antes de poder subir cualquier track)
 
@@ -138,7 +138,7 @@ Play Console te va a pedir completar esto para habilitar publicar en cualquier t
 
 ### 7.5 Producción
 
-Una vez cumplido el requisito de prueba cerrada (12 testers × 14 días) y completados los formularios: **Production → Create new release**, subir `.aab` con IDs reales de AdMob, revisión de Google (horas a días).
+Una vez cumplido el requisito de prueba cerrada (12 testers × 14 días) y completados los formularios: **Production → Create new release**, subir el `.aab` compilado desde **`main`** (`flutter build appbundle --release`), revisión de Google (horas a días).
 
 ## 8. Post-lanzamiento
 
@@ -149,9 +149,10 @@ Una vez cumplido el requisito de prueba cerrada (12 testers × 14 días) y compl
 ## Comandos útiles
 
 ```bash
-# APK local (testing)
+# APK / AAB de testing (rama `test`)
 flutter build apk --release
+flutter build appbundle --release
 
-# Bundle Play Store
+# Bundle de producción (rama `main`)
 flutter build appbundle --release
 ```

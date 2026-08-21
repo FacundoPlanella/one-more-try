@@ -25,10 +25,10 @@ flutter run
 ## Build release
 
 ```bash
-# APK (testing / sideload)
+# APK (testing / sideload) — desde la rama `test` usa ads de prueba
 flutter build apk --release
 
-# Android App Bundle (Google Play)
+# Android App Bundle de producción (Google Play) — desde `main`
 flutter build appbundle --release
 ```
 
@@ -52,7 +52,14 @@ APK: `build/app/outputs/flutter-apk/app-release.apk`
 
 ## AdMob
 
-Ships with Google's **test** ad unit IDs by default (debug and release builds alike). Fill in `androidBannerIdProd` / `iosBannerIdProd` in `lib/core/constants/game_constants.dart` and build with `--dart-define=ADS_PROD=true` only for the production release (see `STORE_CHECKLIST.md`).
+Banner inferior only (no interstitial, no rewarded).
+
+| Rama | Debug | Release (`.aab` / `.apk`) |
+|------|--------|---------------------------|
+| `main` | IDs de test de Google | IDs de producción Android |
+| `test` | IDs de test de Google | IDs de test de Google |
+
+App ID de producción (Android): `ca-app-pub-2433691102754840~1644832695`. iOS todavía usa IDs de test. Ver `STORE_CHECKLIST.md`.
 
 ## License
 

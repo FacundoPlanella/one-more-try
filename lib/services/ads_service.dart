@@ -34,14 +34,17 @@ class AdsService extends ChangeNotifier {
     }
   }
 
-  // Por defecto SIEMPRE IDs de test, en debug y en release: los release
-  // builds de este proyecto también se usan para los tracks de "internal"
-  // y "closed testing" de Play Console (ver STORE_CHECKLIST.md §7.3), y
-  // mostrar ads reales ahí viola la política de tráfico inválido de
-  // AdMob. Solo el build de producción real, compilado explícitamente con
-  // `--dart-define=ADS_PROD=true`, usa los IDs reales — kReleaseMode solo
-  // no alcanza para distinguir "release de testing" de "release final".
-  static const bool _useProdAds = bool.fromEnvironment('ADS_PROD');
+  // Rama `main`: release usa IDs de producción (Play Store). Debug usa
+  // IDs de test de Google para no generar tráfico inválido al desarrollar.
+  // `--dart-define=ADS_PROD=true|false` fuerza el modo si hace falta.
+  // La rama `test` no tiene IDs de producción: ahí los release siguen
+  // en test (tracks internal/closed de Play Console).
+  static bool get _useProdAds {
+    if (const bool.hasEnvironment('ADS_PROD')) {
+      return const bool.fromEnvironment('ADS_PROD');
+    }
+    return kReleaseMode;
+  }
 
   String get _bannerId {
     final isIOS = !kIsWeb && Platform.isIOS;

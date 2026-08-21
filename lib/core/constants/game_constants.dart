@@ -140,19 +140,21 @@ class GameConstants {
   /// obstáculo que lo gastó mate al jugador un frame después).
   static const double shieldInvulnSeconds = 0.4;
 
-  // AdMob — IDs de TEST oficiales de Google. AdsService los usa siempre
-  // fuera de kReleaseMode, así que estos nunca deben tocarse a mano ni
-  // reemplazarse por IDs reales (eso arriesgaría cuenta AdMob por clicks
-  // propios en desarrollo).
+  // AdMob — IDs de TEST oficiales de Google. AdsService los usa en debug
+  // (y en la rama `test`) para no generar tráfico inválido al desarrollar.
+  // No reemplazar por IDs reales.
   static const String androidAppId = 'ca-app-pub-3940256099942544~3347511713';
   static const String iosAppId = 'ca-app-pub-3940256099942544~1458002511';
   static const String androidBannerId = 'ca-app-pub-3940256099942544/6300978111';
   static const String iosBannerId = 'ca-app-pub-3940256099942544/2934735716';
 
-  // AdMob — IDs de PRODUCCIÓN. Completar antes de publicar (ver
-  // STORE_CHECKLIST.md); AdsService solo los usa en kReleaseMode. Si se
-  // deja vacío, el release simplemente no muestra banner (no cae al ID de
-  // test).
-  static const String androidBannerIdProd = '';
+  // AdMob — IDs de PRODUCCIÓN (publicador pub-2433691102754840).
+  // AdsService los usa en release de esta rama (`main`). iOS queda vacío
+  // hasta publicar en App Store: un ID vacío no cae al de test, oculta el banner.
+  static const String androidAppIdProd =
+      'ca-app-pub-2433691102754840~1644832695';
+  static const String iosAppIdProd = '';
+  static const String androidBannerIdProd =
+      'ca-app-pub-2433691102754840/7872678161';
   static const String iosBannerIdProd = '';
 }

@@ -1,7 +1,7 @@
 name: one_more_try
 description: "One more try. — casual one-tap endless lane game (offline, banner ads only)."
 publish_to: 'none'
-version: 1.0.1+11
+version: 1.0.1+13
 
 environment:
   sdk: ^3.12.2
